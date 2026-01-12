@@ -509,7 +509,8 @@ def plot_ode_solutions(
         axes[0].plot(
             data['numerical']['x_values'],
             data['numerical']['y_values'],
-            f'{colors[i]}o-',
+            'o-',
+            color=colors[i],
             markersize=6,
             label=f'n = {num_intervals}',
         )
