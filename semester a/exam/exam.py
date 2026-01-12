@@ -1,6 +1,16 @@
 """
 MTH3007 Numerical Methods: William Fayers
 """
+import os
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+matplotlib.use('Agg')
+
+# Create figures directory
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figures')
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 
 def question_one() -> None:
@@ -78,5 +88,119 @@ def question_one() -> None:
         print(f"x = {cp:.10f} is a {nature}")
 
 
+def question_two() -> None:
+    """
+    Using the least squares method to fit a model function to the data points.
+
+    We'll fit the data to a cubic polynomial of the form:
+    y = a*x^3 + b*x^2 + c*x + d
+
+    Found by visualising the data points first.
+    """
+    x_data_points = [
+        -1.0, -0.89473684, -0.78947368, -0.68421053, -0.57894737,
+        -0.47368421, -0.36842105, -0.26315789, -0.15789474, -0.05263158,
+        0.05263158, 0.15789474, 0.26315789, 0.36842105, 0.47368421,
+        0.57894737, 0.68421053, 0.78947368, 0.89473684, 1.0
+    ]  # Independent variable
+
+    y_data_points = [
+        0.20095699, 0.37525348, 0.51164189, 0.61629633, 0.69539091,
+        0.75509975, 0.80159698, 0.8410567, 0.87965303, 0.9235601,
+        0.97895201, 1.05200289, 1.14888685, 1.27577801, 1.43885048,
+        1.64427839, 1.89823585, 2.20689697, 2.57643588, 3.01302669
+    ]  # Dependent variable
+
+    # Plot the data points to visualize
+    plt.scatter(x_data_points, y_data_points, label='Data Points')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Data Points Visualization')
+    plt.legend()
+    plt.savefig(os.path.join(FIGURES_DIR, 'q2_data_points.png'), dpi=150, bbox_inches='tight')
+    plt.close()
+    print("Plot saved to figures/q2_data_points.png")
+
+    # Fit a cubic polynomial using least squares
+    coefficients = np.polyfit(x_data_points, y_data_points, 3)
+    a, b, c, d = coefficients
+
+    print("2a. Fitted cubic polynomial coefficients:")
+    print(f"a = {a:.10f}, b = {b:.10f}, c = {c:.10f}, d = {d:.10f}")
+    print("\n2b. The model function is:")
+    print(f"y = {a:.10f}*x^3 + {b:.10f}*x^2 + {c:.10f}*x + {d:.10f}")
+
+    # Plot the fitted cubic polynomial along with the data points
+    x_fit = np.linspace(min(x_data_points), max(x_data_points), 100)
+    y_fit = a * x_fit**3 + b * x_fit**2 + c * x_fit + d
+
+    plt.scatter(x_data_points, y_data_points, label='Data Points')
+    plt.plot(x_fit, y_fit, color='red', label='Fitted Cubic Polynomial')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Cubic Polynomial Fit')
+    plt.legend()
+    plt.savefig(os.path.join(FIGURES_DIR, 'q2_cubic_fit.png'), dpi=150, bbox_inches='tight')
+    plt.close()
+    print("Plot saved to figures/q2_cubic_fit.png")
+
+
+def question_three() -> None:
+    """
+    Find the condition number (ratio of largest to smallest matrix eigenvalues) of:
+    A = [[11, 10, 14],
+         [12, 11, -13],
+         [14, 13, -66]]
+         
+    Do this using the Power Method to find the largest eigenvalue, and then again
+    on the inverse of A to find the smallest eigenvalue. Then compare with
+    numpy's built-in `np.linalg.eigs` function - actually `np.linalg.eigvals`,
+    I think.
+
+    Then, find the solutions of Ax = b, where:
+    b = [1.000, 0.999, 1.000] and b = [0.999, 1.000, 1.000]
+    """
+    A = np.array([[11, 10, 14],
+                  [12, 11, -13],
+                  [14, 13, -66]], dtype=float)
+
+    # Power Method implementation, based on Wikipedia linked in question
+    def power_method(matrix, num_iterations=1000, tolerance=1e-10):
+        b_k = np.random.rand(matrix.shape[1])
+        for _ in range(num_iterations):
+            b_k1 = np.dot(matrix, b_k)
+            b_k1_norm = np.linalg.norm(b_k1)
+            b_k = b_k1 / b_k1_norm
+        eigenvalue = np.dot(b_k.T, np.dot(matrix, b_k)) / np.dot(b_k.T, b_k)
+        return eigenvalue
+
+    largest_eigenvalue = power_method(A)
+    smallest_eigenvalue = 1 / power_method(np.linalg.inv(A))
+    condition_number = abs(largest_eigenvalue / smallest_eigenvalue)
+
+    print("3a. Condition number calculated using Power Method:")
+    print(f"Condition Number = {condition_number:.10f}")
+
+    # Compare with numpy's built-in function
+    eigenvalues = np.linalg.eigvals(A)
+    abs_eigenvalues = np.abs(eigenvalues)
+    numpy_condition_number = np.max(abs_eigenvalues) / np.min(abs_eigenvalues)
+
+    print("\n3b. Condition number calculated using numpy's built-in function:")
+    print(f"Condition Number = {numpy_condition_number:.10f}")
+
+    # Solve Ax = b for two different b vectors
+    b1 = np.array([1.000, 0.999, 1.000], dtype=float)
+    b2 = np.array([0.999, 1.000, 1.000], dtype=float)
+
+    x1 = np.linalg.solve(A, b1)
+    x2 = np.linalg.solve(A, b2)
+    print("\n3c. Solutions for Ax = b:")
+    print(f"For b = [1.000, 0.999, 1.000], x = {x1}")
+    print(f"For b = [0.999, 1.000, 1.000], x = {x2}")
+
+
 if __name__ == "__main__":
-    question_one()
+    # question_one()
+    # question_two()
+    question_three()
