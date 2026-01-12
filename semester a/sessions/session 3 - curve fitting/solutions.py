@@ -19,8 +19,8 @@ def gauss_eliminate(
 ) -> np.ndarray:
     """Solve a system of linear equations using Gaussian elimination.
     
-    Solves the system Ax = b using Gaussian elimination with partial
-    pivoting followed by back substitution.
+    Solves the system Ax = b using Gaussian elimination followed by
+    back substitution.
     
     Parameters
     ----------
@@ -36,7 +36,8 @@ def gauss_eliminate(
     
     Notes
     -----
-    This implementation uses partial pivoting for numerical stability.
+    Uses forward elimination to reduce to row echelon form,
+    then back substitution to find the solution.
     """
     num_equations = len(right_hand_side)
     
@@ -46,16 +47,8 @@ def gauss_eliminate(
         right_hand_side.astype(float)
     ])
     
-    # Forward elimination with partial pivoting
+    # Forward elimination
     for pivot_row in range(num_equations):
-        # Find the row with the maximum value in current column
-        max_row_index = pivot_row + np.argmax(
-            np.abs(augmented[pivot_row:, pivot_row])
-        )
-        
-        # Swap rows
-        augmented[[pivot_row, max_row_index]] = augmented[[max_row_index, pivot_row]]
-        
         # Eliminate entries below pivot
         for row_index in range(pivot_row + 1, num_equations):
             if augmented[pivot_row, pivot_row] != 0:

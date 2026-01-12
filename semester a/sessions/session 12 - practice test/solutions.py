@@ -43,17 +43,14 @@ def gauss_eliminate(
         right_hand_side.astype(float)
     ])
     
+    # Forward elimination
     for pivot_row in range(num_equations):
-        max_row_index = pivot_row + np.argmax(
-            np.abs(augmented[pivot_row:, pivot_row])
-        )
-        augmented[[pivot_row, max_row_index]] = augmented[[max_row_index, pivot_row]]
-        
         for row_index in range(pivot_row + 1, num_equations):
             if augmented[pivot_row, pivot_row] != 0:
                 factor = augmented[row_index, pivot_row] / augmented[pivot_row, pivot_row]
                 augmented[row_index, pivot_row:] -= factor * augmented[pivot_row, pivot_row:]
     
+    # Back substitution
     solution = np.zeros(num_equations)
     for row_index in range(num_equations - 1, -1, -1):
         solution[row_index] = (

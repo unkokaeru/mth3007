@@ -36,13 +36,8 @@ def gauss_eliminate(
         right_hand_side.astype(float)
     ])
     
-    # Forward elimination with partial pivoting
+    # Forward elimination
     for pivot_row in range(num_equations):
-        max_row_index = pivot_row + np.argmax(
-            np.abs(augmented[pivot_row:, pivot_row])
-        )
-        augmented[[pivot_row, max_row_index]] = augmented[[max_row_index, pivot_row]]
-        
         for row_index in range(pivot_row + 1, num_equations):
             if augmented[pivot_row, pivot_row] != 0:
                 factor = augmented[row_index, pivot_row] / augmented[pivot_row, pivot_row]
@@ -254,8 +249,7 @@ def qr_decomposition(matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     
     Notes
     -----
-    Uses classical Gram-Schmidt. For numerical stability, modified
-    Gram-Schmidt or Householder reflections are preferred in practice.
+    Uses the Gram-Schmidt process to build orthogonal columns iteratively.
     """
     num_rows, num_cols = matrix.shape
     orthogonal_matrix = np.zeros((num_rows, num_cols))

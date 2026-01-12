@@ -84,11 +84,14 @@ def newton_interpolation(
     difference_table = calculate_divided_differences(x_values, y_values)
     num_points = len(x_values)
     
-    # Use Horner's method for efficiency
-    result = difference_table[0, num_points - 1]
+    # Evaluate Newton's polynomial directly
+    # P(x) = f[x₀] + f[x₀,x₁](x-x₀) + f[x₀,x₁,x₂](x-x₀)(x-x₁) + ...
+    result = difference_table[0, 0]  # f[x₀]
+    product_term = np.ones_like(x_evaluate, dtype=float)
     
-    for point_index in range(num_points - 2, -1, -1):
-        result = result * (x_evaluate - x_values[point_index]) + difference_table[0, point_index]
+    for term_index in range(1, num_points):
+        product_term = product_term * (x_evaluate - x_values[term_index - 1])
+        result = result + difference_table[0, term_index] * product_term
     
     return result
 

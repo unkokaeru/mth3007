@@ -275,8 +275,6 @@ def task1_square_root_612() -> dict:
     For f(x) = x² - a:
         f'(x) = 2x
         xₙ₊₁ = xₙ - (xₙ² - a)/(2xₙ) = (xₙ + a/xₙ)/2
-    
-    This is the Babylonian method for square roots.
     """
     def function(x):
         return x**2 - 612
