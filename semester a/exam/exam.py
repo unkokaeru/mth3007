@@ -267,8 +267,78 @@ def question_four() -> None:
     print("Plot saved to figures/q4_solution.png")
 
 
+def question_five() -> None:
+    """
+    Calculate the Fourier series for the function:
+    s(x) = 4A/P^2 * (x - P/2)^2,  for 0 <= x <= P
+    with P = 5 and A = 1 where the function has been sampled at 10 evenly spaced points.
+
+    Then, plot the value of the cosine coefficients of the series against their index n.
+
+    Finally, check against the results from `np.fft.rfft`.
+    """
+    # Parameters
+    P = 5
+    A = 1
+    num_samples = 10
+
+    def s_function(x):
+        return (4 * A / P**2) * (x - P / 2)**2
+
+    # Calculate Fourier coefficients using trapezoidal integration
+    omega = 2 * np.pi / P
+    x_integration = np.linspace(0, P, 1000)
+    f_values = s_function(x_integration)
+
+    a0 = (2 / P) * np.trapezoid(f_values, x_integration)
+
+    num_terms = num_samples // 2
+    a_n = np.zeros(num_terms)
+    b_n = np.zeros(num_terms)
+
+    for n in range(1, num_terms + 1):
+        cos_values = f_values * np.cos(n * omega * x_integration)
+        sin_values = f_values * np.sin(n * omega * x_integration)
+        a_n[n - 1] = (2 / P) * np.trapezoid(cos_values, x_integration)
+        b_n[n - 1] = (2 / P) * np.trapezoid(sin_values, x_integration)
+
+    print("5a. Fourier coefficients calculated:")
+    print(f"a0 = {a0:.10f}")
+    for n in range(num_terms):
+        print(f"a{n+1} = {a_n[n]:.10f}, b{n+1} = {b_n[n]:.10f}")
+
+    # Plot cosine coefficients
+    plt.figure()
+    plt.stem(range(1, num_terms + 1), a_n)
+    plt.xlabel('n')
+    plt.ylabel('a_n')
+    plt.title('Cosine Coefficients of the Fourier Series')
+    plt.grid(True)
+    plt.savefig(os.path.join(FIGURES_DIR, 'q5_cosine_coefficients.png'),
+                dpi=150, bbox_inches='tight')
+    plt.close()
+    print("Plot saved to figures/q5_cosine_coefficients.png")
+
+    # Check against np.fft.rfft
+    x_samples = np.linspace(0, P, num_samples, endpoint=False)
+    s_samples = s_function(x_samples)
+    fft_coeffs = np.fft.rfft(s_samples)
+
+    # Convert FFT to standard Fourier form for comparison
+    a0_fft = 2 * fft_coeffs[0].real / num_samples
+    a_n_fft = 2 * fft_coeffs[1:-1].real / num_samples
+    b_n_fft = -2 * fft_coeffs[1:-1].imag / num_samples
+
+    print("\n5b. Comparison with np.fft.rfft:")
+    print(f"a0: trapezoidal = {a0:.10f}, FFT = {a0_fft:.10f}")
+    for n in range(len(a_n_fft)):
+        print(f"a{n+1}: trapezoidal = {a_n[n]:.10f}, FFT = {a_n_fft[n]:.10f}")
+        print(f"b{n+1}: trapezoidal = {b_n[n]:.10f}, FFT = {b_n_fft[n]:.10f}")
+
+
 if __name__ == "__main__":
     # question_one()
     # question_two()
     # question_three()
-    question_four()
+    # question_four()
+    question_five()
