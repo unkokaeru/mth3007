@@ -337,8 +337,8 @@ def question_five() -> None:
 
 
 if __name__ == "__main__":
-    # question_one()
-    # question_two()
-    # question_three()
-    # question_four()
+    question_one()
+    question_two()
+    question_three()
+    question_four()
     question_five()
