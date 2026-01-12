@@ -200,7 +200,75 @@ def question_three() -> None:
     print(f"For b = [0.999, 1.000, 1.000], x = {x2}")
 
 
+def question_four() -> None:
+    """
+    Numerically approximate the solution (phi) of:
+    d phi(x)^2 / dx^2 = alpha exp(-rho (x - x0)^2)
+    where x in (-5,5), alpha=0.5, rho=300, and x0=0.5, with boundary conditions:
+    phi(-5) = 0, phi(5) = 0
+
+    Then, plot the solution and check it has converged and is indeed a solution to the equation.
+    """
+    # Parameters
+    alpha = 0.5
+    rho = 300
+    x0 = 0.5
+    x_start, x_end = -5, 5
+    phi_start, phi_end = 0, 0
+
+    def source_function(x):
+        return alpha * np.exp(-rho * (x - x0)**2)
+
+    def solve_ode(num_intervals):
+        h = (x_end - x_start) / num_intervals
+        n = num_intervals - 1
+        x = np.linspace(x_start, x_end, num_intervals + 1)
+
+        # Tridiagonal system: (phi_{i-1} - 2*phi_i + phi_{i+1}) / h^2 = g(x_i)
+        A = np.diag(-2 * np.ones(n)) + np.diag(np.ones(n-1), 1) + np.diag(np.ones(n-1), -1)
+        b = h**2 * source_function(x[1:-1])
+        b[0] -= phi_start
+        b[-1] -= phi_end
+
+        phi_interior = np.linalg.solve(A, b)
+        phi = np.concatenate([[phi_start], phi_interior, [phi_end]])
+        return x, phi, h
+
+    # Solve with increasing resolution
+    print("4a. Solving using finite differences...")
+    solutions = []
+    for n in [100, 200, 400, 800]:
+        x, phi, h = solve_ode(n)
+        solutions.append((x, phi, h))
+        print(f"n = {n}: phi(x0) = {phi[np.argmin(np.abs(x - x0))]:.10f}")
+
+    # Convergence check
+    print("\n4b. Convergence check...")
+    for i in range(1, len(solutions)):
+        phi_coarse = np.interp(solutions[i][0], solutions[i-1][0], solutions[i-1][1])
+        max_diff = np.max(np.abs(solutions[i][1] - phi_coarse))
+        print(f"Difference between successive refinements: {max_diff:.2e}")
+
+    # Verify solution
+    x_final, phi_final, h_final = solutions[-1]
+    d2phi = (phi_final[:-2] - 2*phi_final[1:-1] + phi_final[2:]) / h_final**2
+    residual = np.max(np.abs(d2phi - source_function(x_final[1:-1])))
+    print(f"\n4c. Max residual: {residual:.2e}")
+
+    # Plot solution
+    plt.figure()
+    plt.plot(x_final, phi_final, 'b-')
+    plt.xlabel('x')
+    plt.ylabel('φ(x)')
+    plt.title('Solution of the ODE')
+    plt.grid(True)
+    plt.savefig(os.path.join(FIGURES_DIR, 'q4_solution.png'), dpi=150, bbox_inches='tight')
+    plt.close()
+    print("Plot saved to figures/q4_solution.png")
+
+
 if __name__ == "__main__":
     # question_one()
     # question_two()
-    question_three()
+    # question_three()
+    question_four()
