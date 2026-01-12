@@ -181,54 +181,68 @@ $$f(x, y) = \frac{y_2 - y}{y_2 - y_1} f(x, y_1) + \frac{y - y_1}{y_2 - y_1} f(x,
 import numpy as np
 
 
-def lagrange_interpolate(x_data: np.ndarray, y_data: np.ndarray, x: float) -> float:
-    """Compute Lagrange interpolation at point x.
+def lagrange_interpolate(
+    x_data: np.ndarray,
+    y_data: np.ndarray,
+    target_x: float,
+) -> float:
+    """Compute Lagrange interpolation at a target point.
     
     Args:
         x_data: Array of x coordinates of data points.
         y_data: Array of y coordinates of data points.
-        x: Point at which to interpolate.
+        target_x: Point at which to interpolate.
     
     Returns:
-        Interpolated value at x.
+        Interpolated value at target_x.
     """
-    n = len(x_data)
+    num_points = len(x_data)
     result = 0.0
     
-    for i in range(n):
+    for basis_index in range(num_points):
         # Compute Lagrange basis polynomial L_i(x)
-        basis = 1.0
-        for j in range(n):
-            if i != j:
-                basis *= (x - x_data[j]) / (x_data[i] - x_data[j])
-        result += y_data[i] * basis
+        basis_value = 1.0
+        for point_index in range(num_points):
+            if basis_index != point_index:
+                basis_value *= (
+                    (target_x - x_data[point_index]) /
+                    (x_data[basis_index] - x_data[point_index])
+                )
+        result += y_data[basis_index] * basis_value
     
     return result
 
 
-def newton_divided_diff(x_data: np.ndarray, y_data: np.ndarray, x: float) -> float:
-    """Compute Newton's divided difference interpolation at point x.
+def newton_divided_diff(
+    x_data: np.ndarray,
+    y_data: np.ndarray,
+    target_x: float,
+) -> float:
+    """Compute Newton's divided difference interpolation at a target point.
     
     Args:
         x_data: Array of x coordinates of data points.
         y_data: Array of y coordinates of data points.
-        x: Point at which to interpolate.
+        target_x: Point at which to interpolate.
     
     Returns:
-        Interpolated value at x.
+        Interpolated value at target_x.
     """
-    n = len(x_data)
+    num_points = len(x_data)
     
     # Build divided difference table
-    coef = np.copy(y_data).astype(float)
-    for j in range(1, n):
-        for i in range(n - 1, j - 1, -1):
-            coef[i] = (coef[i] - coef[i - 1]) / (x_data[i] - x_data[i - j])
+    coefficients = np.copy(y_data).astype(float)
+    for difference_order in range(1, num_points):
+        for index in range(num_points - 1, difference_order - 1, -1):
+            coefficients[index] = (
+                (coefficients[index] - coefficients[index - 1]) /
+                (x_data[index] - x_data[index - difference_order])
+            )
     
     # Evaluate polynomial using Horner's method
-    result = coef[n - 1]
-    for i in range(n - 2, -1, -1):
-        result = result * (x - x_data[i]) + coef[i]
+    result = coefficients[num_points - 1]
+    for index in range(num_points - 2, -1, -1):
+        result = result * (target_x - x_data[index]) + coefficients[index]
     
     return result
 
@@ -238,13 +252,13 @@ def main() -> None:
     x_data = np.array([0.0, 1.0, 3.0])
     y_data = np.array([1.0, 3.0, 55.0])
     
-    x_test = 2.0
+    target_x = 2.0
     
-    lagrange_result = lagrange_interpolate(x_data, y_data, x_test)
-    newton_result = newton_divided_diff(x_data, y_data, x_test)
+    lagrange_result = lagrange_interpolate(x_data, y_data, target_x)
+    newton_result = newton_divided_diff(x_data, y_data, target_x)
     
-    print(f"Lagrange interpolation at x={x_test}: {lagrange_result:.4f}")
-    print(f"Newton interpolation at x={x_test}: {newton_result:.4f}")
+    print(f"Lagrange interpolation at x={target_x}: {lagrange_result:.4f}")
+    print(f"Newton interpolation at x={target_x}: {newton_result:.4f}")
 
 
 if __name__ == "__main__":

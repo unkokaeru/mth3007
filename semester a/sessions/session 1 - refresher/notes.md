@@ -1,6 +1,6 @@
 # Session 1: Scientific Computing Refresher
 
-> **MTH3007 Numerical Methods** · Matt Watkins · mwatkins@lincoln.ac.uk
+> **MTH3007 Numerical Methods** · Matt Watkins · <mwatkins@lincoln.ac.uk>
 
 ---
 
@@ -116,17 +116,17 @@ where $\bar{y}$ and $\bar{x}$ are the means of the $y$ and $x$ values respective
 using std::cout;
 
 int main() {
-    double x[100];
-    for (int i = 0; i < 100; i++) {
-        x[i] = static_cast<double>(i);
+    double values[100];
+    for (int index = 0; index < 100; index++) {
+        values[index] = static_cast<double>(index);
     }
 
-    double sum_x = 0.0;
-    for (int i = 0; i < 100; i++) {
-        sum_x += x[i];
+    double sum_of_values = 0.0;
+    for (int index = 0; index < 100; index++) {
+        sum_of_values += values[index];
     }
     
-    cout << "The sum of numbers 0 to 99 is " << sum_x << "\n";
+    cout << "The sum of numbers 0 to 99 is " << sum_of_values << "\n";
     return 0;
 }
 ```
@@ -139,9 +139,9 @@ int main() {
 
 def main() -> None:
     """Calculate and print the sum of integers from 0 to 99."""
-    x = list(range(100))
-    sum_x = sum(x)
-    print(f"The sum of numbers 0 to 99 is {sum_x}")
+    values = list(range(100))
+    sum_of_values = sum(values)
+    print(f"The sum of numbers 0 to 99 is {sum_of_values}")
 
 
 if __name__ == "__main__":

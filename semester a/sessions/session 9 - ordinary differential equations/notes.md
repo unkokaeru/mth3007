@@ -176,81 +176,95 @@ from scipy import linalg
 
 
 def solve_ode_dirichlet(
-    g: callable,
-    x_min: float,
-    x_max: float,
-    y_left: float,
-    y_right: float,
-    n: int,
-    k: float = 0.0,
+    source_function: callable,
+    domain_min: float,
+    domain_max: float,
+    left_boundary_value: float,
+    right_boundary_value: float,
+    num_grid_points: int,
+    linear_coefficient: float = 0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Solve y'' + k*y = g(x) with Dirichlet boundary conditions.
     
     Args:
-        g: Source function g(x).
-        x_min, x_max: Domain boundaries.
-        y_left, y_right: Boundary values.
-        n: Number of grid points.
-        k: Coefficient of y term (default 0).
+        source_function: Source function g(x).
+        domain_min: Left boundary of domain.
+        domain_max: Right boundary of domain.
+        left_boundary_value: Value at left boundary.
+        right_boundary_value: Value at right boundary.
+        num_grid_points: Number of grid points.
+        linear_coefficient: Coefficient of y term (default 0).
     
     Returns:
         Tuple of (x_values, y_values).
     """
-    x = np.linspace(x_min, x_max, n)
-    dx = x[1] - x[0]
+    x_values = np.linspace(domain_min, domain_max, num_grid_points)
+    grid_spacing = x_values[1] - x_values[0]
     
     # Build tridiagonal matrix
-    diag = (k * dx**2 - 2) * np.ones(n)
-    diag[0] = -2
-    diag[-1] = -2
+    main_diagonal = (
+        (linear_coefficient * grid_spacing**2 - 2) *
+        np.ones(num_grid_points)
+    )
+    main_diagonal[0] = -2
+    main_diagonal[-1] = -2
     
-    off_diag = np.ones(n - 1)
-    off_diag[0] = 0
-    off_diag[-1] = 0
+    off_diagonal = np.ones(num_grid_points - 1)
+    off_diagonal[0] = 0
+    off_diagonal[-1] = 0
     
-    M = np.diag(diag) + np.diag(off_diag, 1) + np.diag(off_diag, -1)
+    system_matrix = (
+        np.diag(main_diagonal) +
+        np.diag(off_diagonal, 1) +
+        np.diag(off_diagonal, -1)
+    )
     
     # Build RHS vector
-    b = g(x) * dx**2
-    b[0] = -2 * y_left
-    b[-1] = -2 * y_right
+    right_hand_side = source_function(x_values) * grid_spacing**2
+    right_hand_side[0] = -2 * left_boundary_value
+    right_hand_side[-1] = -2 * right_boundary_value
     
     # Solve using LU decomposition
-    lu, piv = linalg.lu_factor(M)
-    y = linalg.lu_solve((lu, piv), b)
+    lu_factorisation, pivot_indices = linalg.lu_factor(system_matrix)
+    y_values = linalg.lu_solve((lu_factorisation, pivot_indices), right_hand_side)
     
-    return x, y
+    return x_values, y_values
 
 
-def qr_eigenvalues(A: np.ndarray, max_iter: int = 100) -> np.ndarray:
+def qr_eigenvalues(
+    input_matrix: np.ndarray,
+    max_iterations: int = 100,
+) -> np.ndarray:
     """Find eigenvalues using QR algorithm.
     
     Args:
-        A: Square matrix.
-        max_iter: Maximum iterations.
+        input_matrix: Square matrix.
+        max_iterations: Maximum iterations.
     
     Returns:
         Array of eigenvalues (diagonal of converged matrix).
     """
-    Ak = A.copy()
-    for _ in range(max_iter):
-        Q, R = np.linalg.qr(Ak)
-        Ak = R @ Q
-    return np.diag(Ak)
+    current_matrix = input_matrix.copy()
+    for _ in range(max_iterations):
+        orthogonal_matrix, upper_triangular = np.linalg.qr(current_matrix)
+        current_matrix = upper_triangular @ orthogonal_matrix
+    return np.diag(current_matrix)
 
 
 def main() -> None:
     """Demonstrate ODE solving."""
     # Solve y'' = x with y(0) = 0.2, y(1) = 1.5
-    g = lambda x: x
-    x, y = solve_ode_dirichlet(g, 0.0, 1.0, 0.2, 1.5, n=100)
+    source_function = lambda position: position
+    x_values, y_numerical = solve_ode_dirichlet(
+        source_function, 0.0, 1.0, 0.2, 1.5, num_grid_points=100
+    )
     
     # Analytical solution: y = x^3/6 + Ax + B
     # With BCs: y(0) = 0.2 -> B = 0.2
     #           y(1) = 1.5 -> 1/6 + A + 0.2 = 1.5 -> A = 7/6
-    y_exact = x**3 / 6 + 7/6 * x + 0.2
+    y_analytical = x_values**3 / 6 + 7/6 * x_values + 0.2
     
-    print(f"Maximum error: {np.max(np.abs(y - y_exact)):.2e}")
+    print(f"Maximum error: {np.max(np.abs(y_numerical - y_analytical)):.2e}")
 
 
 if __name__ == "__main__":

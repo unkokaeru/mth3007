@@ -132,131 +132,160 @@ import matplotlib.pyplot as plt
 
 
 def compute_fourier_coefficients(
-    f: callable,
-    L: float,
-    N_points: int,
-    N_terms: int,
+    target_function: callable,
+    half_period: float,
+    num_integration_points: int,
+    num_terms: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute Fourier coefficients using trapezoidal integration.
     
     Args:
-        f: Function to analyse.
-        L: Half-period (function defined on [-L, L]).
-        N_points: Number of integration points.
-        N_terms: Number of Fourier terms to compute.
+        target_function: Function to analyse.
+        half_period: Half-period (function defined on [-L, L]).
+        num_integration_points: Number of integration points.
+        num_terms: Number of Fourier terms to compute.
     
     Returns:
-        Tuple of (a_coefficients, b_coefficients).
+        Tuple of (cosine_coefficients, sine_coefficients).
     """
-    x = np.linspace(-L, L, N_points + 1)
-    h = x[1] - x[0]
-    f_vals = f(x)
+    x_values = np.linspace(-half_period, half_period, num_integration_points + 1)
+    step_size = x_values[1] - x_values[0]
+    function_values = target_function(x_values)
     
-    a = np.zeros(N_terms)
-    b = np.zeros(N_terms)
+    cosine_coefficients = np.zeros(num_terms)
+    sine_coefficients = np.zeros(num_terms)
     
-    for n in range(N_terms):
-        cos_vals = np.cos(n * np.pi * x / L)
-        sin_vals = np.sin(n * np.pi * x / L)
+    for term_index in range(num_terms):
+        cosine_values = np.cos(term_index * np.pi * x_values / half_period)
+        sine_values = np.sin(term_index * np.pi * x_values / half_period)
         
         # Trapezoidal rule for a_n
-        integrand = f_vals * cos_vals
-        integral = h * (0.5 * integrand[0] + np.sum(integrand[1:-1]) + 0.5 * integrand[-1])
-        a[n] = integral / (L * (1 + (n == 0)))
+        integrand = function_values * cosine_values
+        integral = step_size * (
+            0.5 * integrand[0] +
+            np.sum(integrand[1:-1]) +
+            0.5 * integrand[-1]
+        )
+        cosine_coefficients[term_index] = integral / (
+            half_period * (1 + (term_index == 0))
+        )
         
         # Trapezoidal rule for b_n (boundary terms are zero for sine)
-        integrand = f_vals * sin_vals
-        b[n] = h * np.sum(integrand[1:-1]) / L
+        integrand = function_values * sine_values
+        sine_coefficients[term_index] = (
+            step_size * np.sum(integrand[1:-1]) / half_period
+        )
     
-    return a, b
+    return cosine_coefficients, sine_coefficients
 
 
 def reconstruct_fourier(
-    x: np.ndarray,
-    a: np.ndarray,
-    b: np.ndarray,
-    L: float,
+    x_values: np.ndarray,
+    cosine_coefficients: np.ndarray,
+    sine_coefficients: np.ndarray,
+    half_period: float,
 ) -> np.ndarray:
     """Reconstruct function from Fourier coefficients.
     
     Args:
-        x: Points at which to evaluate.
-        a: Cosine coefficients.
-        b: Sine coefficients.
-        L: Half-period.
+        x_values: Points at which to evaluate.
+        cosine_coefficients: Cosine (a_n) coefficients.
+        sine_coefficients: Sine (b_n) coefficients.
+        half_period: Half-period of the function.
     
     Returns:
         Reconstructed function values.
     """
-    result = np.zeros_like(x)
-    for n in range(len(a)):
-        result += a[n] * np.cos(n * np.pi * x / L)
-        result += b[n] * np.sin(n * np.pi * x / L)
+    result = np.zeros_like(x_values)
+    for term_index in range(len(cosine_coefficients)):
+        result += cosine_coefficients[term_index] * np.cos(
+            term_index * np.pi * x_values / half_period
+        )
+        result += sine_coefficients[term_index] * np.sin(
+            term_index * np.pi * x_values / half_period
+        )
     return result
 
 
 def verify_parseval(
-    f: callable,
-    a: np.ndarray,
-    b: np.ndarray,
-    L: float,
-    N_points: int,
+    target_function: callable,
+    cosine_coefficients: np.ndarray,
+    sine_coefficients: np.ndarray,
+    half_period: float,
+    num_integration_points: int,
 ) -> tuple[float, float]:
     """Verify Parseval's theorem.
     
     Args:
-        f: Original function.
-        a: Cosine coefficients.
-        b: Sine coefficients.
-        L: Half-period.
-        N_points: Integration points.
+        target_function: Original function.
+        cosine_coefficients: Cosine coefficients.
+        sine_coefficients: Sine coefficients.
+        half_period: Half-period.
+        num_integration_points: Integration points.
     
     Returns:
-        Tuple of (LHS integral, RHS sum of squares).
+        Tuple of (left_hand_side integral, right_hand_side sum of squares).
     """
-    x = np.linspace(-L, L, N_points + 1)
-    h = x[1] - x[0]
-    f_vals = f(x)
+    x_values = np.linspace(
+        -half_period, half_period, num_integration_points + 1
+    )
+    step_size = x_values[1] - x_values[0]
+    function_values = target_function(x_values)
     
     # LHS: integral of |f|^2
-    integrand = f_vals**2
-    lhs = h * (0.5 * integrand[0] + np.sum(integrand[1:-1]) + 0.5 * integrand[-1])
+    integrand = function_values**2
+    left_hand_side = step_size * (
+        0.5 * integrand[0] +
+        np.sum(integrand[1:-1]) +
+        0.5 * integrand[-1]
+    )
     
     # RHS: L * (a0^2/2 + sum(an^2 + bn^2))
-    rhs = L * (a[0]**2 / 2 + np.sum(a[1:]**2 + b[1:]**2))
+    right_hand_side = half_period * (
+        cosine_coefficients[0]**2 / 2 +
+        np.sum(cosine_coefficients[1:]**2 + sine_coefficients[1:]**2)
+    )
     
-    return lhs, rhs
+    return left_hand_side, right_hand_side
 
 
 def main() -> None:
     """Demonstrate Fourier series computation."""
-    L = np.pi
-    N_points = 200
-    N_terms = 20
+    half_period = np.pi
+    num_integration_points = 200
+    num_terms = 20
     
     # Square wave
-    def square_wave(x):
-        return np.where(x >= 0, 1.0, -1.0)
+    def square_wave(x_values):
+        return np.where(x_values >= 0, 1.0, -1.0)
     
-    a, b = compute_fourier_coefficients(square_wave, L, N_points, N_terms)
+    cosine_coeffs, sine_coeffs = compute_fourier_coefficients(
+        square_wave, half_period, num_integration_points, num_terms
+    )
     
     print("Square wave Fourier coefficients:")
-    print(f"a_0 = {a[0]:.6f}")
-    for n in range(1, min(5, N_terms)):
-        print(f"a_{n} = {a[n]:.6f}, b_{n} = {b[n]:.6f}")
+    print(f"a_0 = {cosine_coeffs[0]:.6f}")
+    for term_index in range(1, min(5, num_terms)):
+        print(f"a_{term_index} = {cosine_coeffs[term_index]:.6f}, "
+              f"b_{term_index} = {sine_coeffs[term_index]:.6f}")
     
     # Verify Parseval's theorem
-    lhs, rhs = verify_parseval(square_wave, a, b, L, N_points)
-    print(f"\nParseval verification: LHS = {lhs:.6f}, RHS = {rhs:.6f}")
+    left_side, right_side = verify_parseval(
+        square_wave, cosine_coeffs, sine_coeffs,
+        half_period, num_integration_points
+    )
+    print(f"\nParseval verification: LHS = {left_side:.6f}, RHS = {right_side:.6f}")
     
     # Plot reconstruction
-    x_plot = np.linspace(-L, L, 500)
+    x_plot = np.linspace(-half_period, half_period, 500)
     y_original = square_wave(x_plot)
-    y_reconstructed = reconstruct_fourier(x_plot, a, b, L)
+    y_reconstructed = reconstruct_fourier(
+        x_plot, cosine_coeffs, sine_coeffs, half_period
+    )
     
     plt.figure(figsize=(10, 6))
     plt.plot(x_plot, y_original, "b-", label="Original", linewidth=2)
-    plt.plot(x_plot, y_reconstructed, "r--", label=f"Fourier ({N_terms} terms)")
+    plt.plot(x_plot, y_reconstructed, "r--", label=f"Fourier ({num_terms} terms)")
     plt.xlabel("x")
     plt.ylabel("f(x)")
     plt.title("Fourier Series Approximation")

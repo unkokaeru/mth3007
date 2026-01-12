@@ -146,67 +146,77 @@ from scipy import stats
 
 
 def fit_general_least_squares(
-    x: np.ndarray,
-    y: np.ndarray,
+    x_values: np.ndarray,
+    y_values: np.ndarray,
     basis_functions: list,
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """Fit data using general linear least squares.
     
     Args:
-        x: Independent variable values.
-        y: Dependent variable values.
+        x_values: Independent variable values.
+        y_values: Dependent variable values.
         basis_functions: List of callable basis functions.
     
     Returns:
         Tuple of (parameters, parameter_variances, standard_error).
     """
-    n = len(x)
-    m = len(basis_functions)
+    num_data_points = len(x_values)
+    num_parameters = len(basis_functions)
     
     # Build design matrix
-    Z = np.column_stack([f(x) for f in basis_functions])
+    design_matrix = np.column_stack(
+        [basis_func(x_values) for basis_func in basis_functions]
+    )
     
     # Solve normal equations
-    ZTZ = Z.T @ Z
-    ZTy = Z.T @ y
-    a = np.linalg.solve(ZTZ, ZTy)
+    normal_matrix = design_matrix.T @ design_matrix
+    normal_rhs = design_matrix.T @ y_values
+    parameters = np.linalg.solve(normal_matrix, normal_rhs)
     
     # Calculate residuals and standard error
-    residuals = y - Z @ a
-    s_yx = np.sqrt(np.sum(residuals**2) / (n - m))
+    residuals = y_values - design_matrix @ parameters
+    standard_error = np.sqrt(
+        np.sum(residuals**2) / (num_data_points - num_parameters)
+    )
     
     # Parameter variances
-    ZTZ_inv = np.linalg.inv(ZTZ)
-    variances = s_yx**2 * np.diag(ZTZ_inv)
+    normal_matrix_inverse = np.linalg.inv(normal_matrix)
+    parameter_variances = standard_error**2 * np.diag(normal_matrix_inverse)
     
-    return a, variances, s_yx
+    return parameters, parameter_variances, standard_error
 
 
 def main() -> None:
     """Demonstrate general least squares fitting."""
-    x = np.array([10.0, 16.3, 23.0, 27.5, 31.0, 35.6, 39.0, 41.5,
-                  42.9, 45.0, 46.0, 45.5, 46.0, 49.0, 50.0])
-    y = np.array([8.953, 16.405, 22.607, 27.769, 32.065, 35.641,
-                  38.617, 41.095, 43.156, 44.872, 46.301, 47.490,
-                  48.479, 49.303, 49.988])
+    x_data = np.array([10.0, 16.3, 23.0, 27.5, 31.0, 35.6, 39.0, 41.5,
+                       42.9, 45.0, 46.0, 45.5, 46.0, 49.0, 50.0])
+    y_data = np.array([8.953, 16.405, 22.607, 27.769, 32.065, 35.641,
+                       38.617, 41.095, 43.156, 44.872, 46.301, 47.490,
+                       48.479, 49.303, 49.988])
     
     # Linear model: y = a0 + a1*x
-    basis = [lambda x: np.ones_like(x), lambda x: x]
+    basis_functions = [
+        lambda x_val: np.ones_like(x_val),
+        lambda x_val: x_val,
+    ]
     
-    params, variances, s_yx = fit_general_least_squares(x, y, basis)
+    parameters, variances, standard_error = fit_general_least_squares(
+        x_data, y_data, basis_functions
+    )
     
-    print(f"Parameters: a0 = {params[0]:.4f}, a1 = {params[1]:.4f}")
+    print(f"Parameters: a0 = {parameters[0]:.4f}, a1 = {parameters[1]:.4f}")
     print(f"Standard errors: s(a0) = {np.sqrt(variances[0]):.4f}, "
           f"s(a1) = {np.sqrt(variances[1]):.4f}")
     
     # 95% confidence intervals
-    n, m = len(x), len(basis)
-    t_crit = stats.t.ppf(0.975, n - m)
+    num_data_points = len(x_data)
+    num_parameters = len(basis_functions)
+    t_critical = stats.t.ppf(0.975, num_data_points - num_parameters)
     
-    for i, name in enumerate(["a0", "a1"]):
-        margin = t_crit * np.sqrt(variances[i])
-        print(f"95% CI for {name}: ({params[i] - margin:.4f}, "
-              f"{params[i] + margin:.4f})")
+    for param_index, param_name in enumerate(["a0", "a1"]):
+        margin = t_critical * np.sqrt(variances[param_index])
+        print(f"95% CI for {param_name}: ({parameters[param_index] - margin:.4f}, "
+              f"{parameters[param_index] + margin:.4f})")
 
 
 if __name__ == "__main__":

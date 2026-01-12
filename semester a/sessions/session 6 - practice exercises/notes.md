@@ -45,7 +45,10 @@ Copying code between projects is error-prone. Instead, organise reusable functio
 import numpy as np
 
 
-def gauss_eliminate(A: np.ndarray, b: np.ndarray) -> np.ndarray:
+def gauss_eliminate(
+    coefficient_matrix: np.ndarray,
+    right_hand_side: np.ndarray,
+) -> np.ndarray:
     """Solve Ax = b using Gaussian elimination."""
     # Implementation here
     pass
@@ -55,7 +58,7 @@ def gauss_eliminate(A: np.ndarray, b: np.ndarray) -> np.ndarray:
 # main.py
 from my_library import gauss_eliminate
 
-result = gauss_eliminate(A, b)
+result = gauss_eliminate(coefficient_matrix, right_hand_side)
 ```
 
 ---
@@ -102,54 +105,57 @@ import numpy as np
 
 
 def power_method(
-    A: np.ndarray,
+    input_matrix: np.ndarray,
     max_iterations: int = 1000,
     tolerance: float = 1e-10,
 ) -> tuple[np.ndarray, float]:
     """Find the dominant eigenvector and eigenvalue using the power method.
     
     Args:
-        A: Square matrix.
+        input_matrix: Square matrix.
         max_iterations: Maximum number of iterations.
         tolerance: Convergence tolerance.
     
     Returns:
         Tuple of (eigenvector, eigenvalue).
     """
-    n = A.shape[0]
-    x = np.random.rand(n)
-    x = x / np.linalg.norm(x)
+    matrix_size = input_matrix.shape[0]
+    current_vector = np.random.rand(matrix_size)
+    current_vector = current_vector / np.linalg.norm(current_vector)
     
     for _ in range(max_iterations):
-        x_new = A @ x
-        x_new = x_new / np.linalg.norm(x_new)
+        next_vector = input_matrix @ current_vector
+        next_vector = next_vector / np.linalg.norm(next_vector)
         
-        if np.linalg.norm(x_new - x) < tolerance:
+        if np.linalg.norm(next_vector - current_vector) < tolerance:
             break
-        x = x_new
+        current_vector = next_vector
     
     # Rayleigh quotient for eigenvalue
-    eigenvalue = (x.T @ A @ x) / (x.T @ x)
+    eigenvalue = (
+        (current_vector.T @ input_matrix @ current_vector) /
+        (current_vector.T @ current_vector)
+    )
     
-    return x, eigenvalue
+    return current_vector, eigenvalue
 
 
 def main() -> None:
     """Demonstrate the power method."""
-    A = np.array([
+    test_matrix = np.array([
         [1, -1, -1, -1],
         [-1, 2, 0, 0],
         [-1, 0, 3, 1],
         [-1, 0, 1, 4],
     ], dtype=float)
     
-    eigenvector, eigenvalue = power_method(A)
+    eigenvector, eigenvalue = power_method(test_matrix)
     
     print(f"Dominant eigenvalue: {eigenvalue:.6f}")
     print(f"Eigenvector: {eigenvector}")
     
     # Verify: A @ v should equal lambda * v
-    residual = A @ eigenvector - eigenvalue * eigenvector
+    residual = test_matrix @ eigenvector - eigenvalue * eigenvector
     print(f"Verification (should be ~0): {np.linalg.norm(residual):.2e}")
 
 

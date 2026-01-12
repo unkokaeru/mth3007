@@ -178,98 +178,120 @@ from typing import Callable
 
 
 def newton_root(
-    f: Callable[[float], float],
-    df: Callable[[float], float],
-    x0: float,
-    tol: float = 1e-10,
-    max_iter: int = 100,
+    target_function: Callable[[float], float],
+    derivative_function: Callable[[float], float],
+    initial_guess: float,
+    tolerance: float = 1e-10,
+    max_iterations: int = 100,
 ) -> float:
     """Find root using Newton's method.
     
     Args:
-        f: Function to find root of.
-        df: Derivative of f.
-        x0: Initial guess.
-        tol: Convergence tolerance.
-        max_iter: Maximum iterations.
+        target_function: Function to find root of.
+        derivative_function: Derivative of target_function.
+        initial_guess: Initial guess for the root.
+        tolerance: Convergence tolerance.
+        max_iterations: Maximum iterations.
     
     Returns:
         Approximate root.
     """
-    x = x0
-    for _ in range(max_iter):
-        fx = f(x)
-        if abs(fx) < tol:
-            return x
-        x = x - fx / df(x)
-    return x
+    current_estimate = initial_guess
+    for _ in range(max_iterations):
+        function_value = target_function(current_estimate)
+        if abs(function_value) < tolerance:
+            return current_estimate
+        current_estimate = (
+            current_estimate -
+            function_value / derivative_function(current_estimate)
+        )
+    return current_estimate
 
 
 def secant_method(
-    f: Callable[[float], float],
-    x0: float,
-    x1: float,
-    tol: float = 1e-10,
-    max_iter: int = 100,
+    target_function: Callable[[float], float],
+    first_guess: float,
+    second_guess: float,
+    tolerance: float = 1e-10,
+    max_iterations: int = 100,
 ) -> float:
     """Find root using the secant method.
     
     Args:
-        f: Function to find root of.
-        x0, x1: Initial guesses.
-        tol: Convergence tolerance.
-        max_iter: Maximum iterations.
+        target_function: Function to find root of.
+        first_guess: First initial guess.
+        second_guess: Second initial guess.
+        tolerance: Convergence tolerance.
+        max_iterations: Maximum iterations.
     
     Returns:
         Approximate root.
     """
-    for _ in range(max_iter):
-        f0, f1 = f(x0), f(x1)
-        if abs(f1) < tol:
-            return x1
-        x_new = (x0 * f1 - x1 * f0) / (f1 - f0)
-        x0, x1 = x1, x_new
-    return x1
+    previous_estimate = first_guess
+    current_estimate = second_guess
+    
+    for _ in range(max_iterations):
+        previous_value = target_function(previous_estimate)
+        current_value = target_function(current_estimate)
+        
+        if abs(current_value) < tolerance:
+            return current_estimate
+        
+        next_estimate = (
+            (previous_estimate * current_value - current_estimate * previous_value) /
+            (current_value - previous_value)
+        )
+        previous_estimate = current_estimate
+        current_estimate = next_estimate
+    
+    return current_estimate
 
 
 def newton_optimise(
-    f: Callable[[float], float],
-    df: Callable[[float], float],
-    d2f: Callable[[float], float],
-    x0: float,
-    tol: float = 1e-10,
-    max_iter: int = 100,
+    target_function: Callable[[float], float],
+    first_derivative: Callable[[float], float],
+    second_derivative: Callable[[float], float],
+    initial_guess: float,
+    tolerance: float = 1e-10,
+    max_iterations: int = 100,
 ) -> float:
     """Find extremum using Newton's method for optimisation.
     
     Args:
-        f: Function to optimise.
-        df: First derivative.
-        d2f: Second derivative.
-        x0: Initial guess.
-        tol: Convergence tolerance.
-        max_iter: Maximum iterations.
+        target_function: Function to optimise.
+        first_derivative: First derivative of target_function.
+        second_derivative: Second derivative of target_function.
+        initial_guess: Initial guess for the extremum.
+        tolerance: Convergence tolerance.
+        max_iterations: Maximum iterations.
     
     Returns:
         Approximate location of extremum.
     """
-    x = x0
-    for _ in range(max_iter):
-        dfx = df(x)
-        if abs(dfx) < tol:
-            return x
-        x = x - dfx / d2f(x)
-    return x
+    current_estimate = initial_guess
+    for _ in range(max_iterations):
+        derivative_value = first_derivative(current_estimate)
+        if abs(derivative_value) < tolerance:
+            return current_estimate
+        current_estimate = (
+            current_estimate -
+            derivative_value / second_derivative(current_estimate)
+        )
+    return current_estimate
 
 
 def main() -> None:
     """Demonstrate root finding methods."""
     # Find sqrt(612) by solving x^2 - 612 = 0
-    f = lambda x: x**2 - 612
-    df = lambda x: 2 * x
+    target_function = lambda value: value**2 - 612
+    derivative_function = lambda value: 2 * value
     
-    root_newton = newton_root(f, df, x0=25.0)
-    root_secant = secant_method(f, x0=20.0, x1=30.0)
+    root_newton = newton_root(
+        target_function, derivative_function, initial_guess=25.0
+    )
+    root_secant = secant_method(
+        target_function, first_guess=20.0, second_guess=30.0
+    )
     
     print(f"sqrt(612) via Newton: {root_newton:.10f}")
     print(f"sqrt(612) via Secant: {root_secant:.10f}")
@@ -286,7 +308,6 @@ if __name__ == "__main__":
 
 | Method | Convergence | Requirements |
 | ------ | ----------- | ------------ |
-| Bisection | Linear | Bracket |
 | Bisection | Linear | Bracket |
 | Newton (root) | Quadratic | $f'(x)$ |
 | Secant | Superlinear (~1.618) | Two initial points |
