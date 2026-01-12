@@ -8,9 +8,16 @@ This module provides solutions to the Session 3 exercises covering:
 Author: William Fayers
 """
 
+import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+# Create figures directory in the same folder as this script
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figures')
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 
 def gauss_eliminate(
@@ -258,7 +265,9 @@ def plot_multiple_regression_3d(
     ax.set_zlabel('y')
     ax.set_title(title)
     
-    plt.show()
+    save_path = os.path.join(FIGURES_DIR, 'multiple_regression.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {save_path}")
     plt.close()
 
 
@@ -337,7 +346,9 @@ def main() -> None:
     plt.title('Task 1: Linear Regression Verification')
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.show()
+    save_path = os.path.join(FIGURES_DIR, 'task1_linear_regression.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {save_path}")
     plt.close()
     
     # Task 2: Quadratic Regression Derivation

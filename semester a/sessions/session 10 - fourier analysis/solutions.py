@@ -9,8 +9,15 @@ This module provides solutions to the Session 10 exercises covering:
 Author: William Fayers
 """
 
+import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
+# Create figures directory in the same folder as this script
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figures')
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 
 def compute_fourier_coefficients_numerical(
@@ -533,7 +540,11 @@ def plot_waveform_and_fourier(
     
     plt.suptitle(f'Fourier Series Approximation: {wave_name}', fontsize=14)
     plt.tight_layout()
-    plt.show()
+    # Generate filename from wave name
+    filename = wave_name.lower().replace(' ', '_') + '_fourier_approximation.png'
+    save_path = os.path.join(FIGURES_DIR, filename)
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {save_path}")
     plt.close()
 
 
@@ -601,7 +612,9 @@ def plot_gibbs_phenomenon(gibbs_results: dict) -> None:
     ax4.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.show()
+    save_path = os.path.join(FIGURES_DIR, 'gibbs_phenomenon.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {save_path}")
     plt.close()
 
 

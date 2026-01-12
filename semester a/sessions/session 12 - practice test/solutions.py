@@ -11,8 +11,15 @@ This module provides solutions to the Practice Test questions covering:
 Author: William Fayers
 """
 
+import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+
+# Create figures directory in the same folder as this script
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figures')
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 
 # =============================================================================
@@ -162,7 +169,9 @@ def plot_question1(results: dict) -> None:
     axes[1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.show()
+    fig_path = os.path.join(FIGURES_DIR, 'question1_regression.png')
+    plt.savefig(fig_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {fig_path}")
     plt.close()
 
 
@@ -666,7 +675,9 @@ def plot_question6(results: dict) -> None:
     ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.show()
+    fig_path = os.path.join(FIGURES_DIR, 'question6_ode.png')
+    plt.savefig(fig_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {fig_path}")
     plt.close()
 
 

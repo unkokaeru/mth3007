@@ -8,9 +8,16 @@ This module provides solutions to the Session 4 exercises covering:
 Author: William Fayers
 """
 
+import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
+
+# Create figures directory in the same folder as this script
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figures')
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 
 def gauss_eliminate(
@@ -294,7 +301,9 @@ def plot_exponential_fit(results: dict) -> None:
     axes[1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.show()
+    save_path = os.path.join(FIGURES_DIR, 'exponential_fit.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {save_path}")
     plt.close()
 
 

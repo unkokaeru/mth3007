@@ -7,8 +7,15 @@ This module provides solutions to the Session 1 exercises covering:
 Author: William Fayers
 """
 
+import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
+# Create figures directory in the same folder as this script
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figures')
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 
 def compute_sum_2n_squared(upper_limit: int = 99) -> float:
@@ -229,8 +236,11 @@ def plot_linear_regression(
     
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Plot saved to {save_path}")
     else:
-        plt.show()
+        default_path = os.path.join(FIGURES_DIR, 'linear_regression.png')
+        plt.savefig(default_path, dpi=150, bbox_inches='tight')
+        print(f"Plot saved to {default_path}")
     
     plt.close()
 

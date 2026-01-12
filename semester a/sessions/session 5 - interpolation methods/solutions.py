@@ -8,8 +8,15 @@ This module provides solutions to the Session 5 exercises covering:
 Author: William Fayers
 """
 
+import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
+# Create figures directory in the same folder as this script
+FIGURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'figures')
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 
 def calculate_divided_differences(
@@ -366,7 +373,9 @@ def plot_polynomial_interpolation(results: dict) -> None:
     axes[1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.show()
+    save_path = os.path.join(FIGURES_DIR, 'interpolation_results.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {save_path}")
     plt.close()
 
 
@@ -423,7 +432,9 @@ def plot_bilinear_interpolation(results: dict) -> None:
     axes[1].set_visible(False)
     
     plt.tight_layout()
-    plt.show()
+    save_path = os.path.join(FIGURES_DIR, 'bilinear_interpolation.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Plot saved to {save_path}")
     plt.close()
 
 
