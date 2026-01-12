@@ -1,6 +1,6 @@
 # Session 8: Root Finding and Optimisation
 
-> **MTH3007 Numerical Methods** · Matt Watkins · <mwatkins@lincoln.ac.uk>
+> Matt Watkins · <mwatkins@lincoln.ac.uk> (edited by William Fayers)
 
 ---
 

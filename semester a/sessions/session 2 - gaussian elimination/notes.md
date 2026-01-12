@@ -1,6 +1,6 @@
 # Session 2: Gaussian Elimination
 
-> **MTH3007 Numerical Methods** · Matt Watkins · <mwatkins@lincoln.ac.uk>
+> Matt Watkins · <mwatkins@lincoln.ac.uk> (edited by William Fayers)
 
 ---
 

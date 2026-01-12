@@ -6,7 +6,7 @@ This module provides solutions to the Session 10 exercises covering:
 - Gibbs phenomenon
 - Parseval's theorem
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np
@@ -208,9 +208,9 @@ def analytical_square_wave_coefficients(num_terms: int) -> dict:
     a_coefficients = np.zeros(num_terms)
     b_coefficients = np.zeros(num_terms)
     
-    for n in range(1, num_terms + 1):
-        if n % 2 == 1:  # Odd harmonics only
-            b_coefficients[n - 1] = 4 / (n * np.pi)
+    for harmonic_number in range(1, num_terms + 1):
+        if harmonic_number % 2 == 1:  # Odd harmonics only
+            b_coefficients[harmonic_number - 1] = 4 / (harmonic_number * np.pi)
     
     return {
         'a0': 0.0,
@@ -244,10 +244,10 @@ def analytical_triangle_wave_coefficients(num_terms: int) -> dict:
     a_coefficients = np.zeros(num_terms)
     b_coefficients = np.zeros(num_terms)
     
-    for n in range(1, num_terms + 1):
-        if n % 2 == 1:  # Odd harmonics only
-            sign = (-1)**((n - 1) // 2)
-            b_coefficients[n - 1] = 8 * sign / (n**2 * np.pi**2)
+    for harmonic_number in range(1, num_terms + 1):
+        if harmonic_number % 2 == 1:  # Odd harmonics only
+            sign = (-1)**((harmonic_number - 1) // 2)
+            b_coefficients[harmonic_number - 1] = 8 * sign / (harmonic_number**2 * np.pi**2)
     
     return {
         'a0': 0.0,
@@ -281,8 +281,8 @@ def analytical_sawtooth_wave_coefficients(num_terms: int) -> dict:
     a_coefficients = np.zeros(num_terms)
     b_coefficients = np.zeros(num_terms)
     
-    for n in range(1, num_terms + 1):
-        b_coefficients[n - 1] = 2 * (-1)**(n + 1) / (n * np.pi)
+    for harmonic_number in range(1, num_terms + 1):
+        b_coefficients[harmonic_number - 1] = 2 * (-1)**(harmonic_number + 1) / (harmonic_number * np.pi)
     
     return {
         'a0': 0.0,
@@ -322,8 +322,8 @@ def compute_parseval_sum(coefficients: dict, num_terms: int = None) -> float:
     
     parseval_sum = (a0 / 2)**2
     
-    for n in range(min(num_terms, len(a_n))):
-        parseval_sum += 0.5 * (a_n[n]**2 + b_n[n]**2)
+    for term_index in range(min(num_terms, len(a_n))):
+        parseval_sum += 0.5 * (a_n[term_index]**2 + b_n[term_index]**2)
     
     return parseval_sum
 
@@ -567,7 +567,7 @@ def plot_gibbs_phenomenon(gibbs_results: dict) -> None:
     # Plot 2: Overshoot convergence
     ax2 = axes[0, 1]
     num_terms_vals = list(gibbs_results.keys())
-    overshoots = [gibbs_results[n]['overshoot'] for n in num_terms_vals]
+    overshoots = [gibbs_results[num_terms]['overshoot'] for num_terms in num_terms_vals]
     ax2.semilogx(num_terms_vals, overshoots, 'bo-', markersize=8)
     ax2.axhline(y=1.0898, color='r', linestyle='--', label='Gibbs limit ≈ 1.0898')
     ax2.set_xlabel('Number of terms')
@@ -624,8 +624,8 @@ def display_coefficient_table(coefficients: dict, wave_name: str, num_display: i
     print("  n  |       aₙ       |       bₙ")
     print("-----|----------------|----------------")
     
-    for n in range(num_display):
-        print(f"  {n+1:2d} | {coefficients['a_n'][n]:14.6f} | {coefficients['b_n'][n]:14.6f}")
+    for term_index in range(num_display):
+        print(f"  {term_index+1:2d} | {coefficients['a_n'][term_index]:14.6f} | {coefficients['b_n'][term_index]:14.6f}")
 
 
 def main() -> None:
@@ -650,10 +650,10 @@ def main() -> None:
         print("    n  | Numerical     | Analytical    | Difference")
         print("   ----|---------------|---------------|------------")
         count = 0
-        for n in range(len(numerical)):
-            if abs(analytical[n]) > 1e-10:
-                diff = abs(numerical[n] - analytical[n])
-                print(f"   {n+1:3d} | {numerical[n]:13.6f} | {analytical[n]:13.6f} | {diff:.2e}")
+        for term_index in range(len(numerical)):
+            if abs(analytical[term_index]) > 1e-10:
+                diff = abs(numerical[term_index] - analytical[term_index])
+                print(f"   {term_index+1:3d} | {numerical[term_index]:13.6f} | {analytical[term_index]:13.6f} | {diff:.2e}")
                 count += 1
                 if count >= 5:
                     break

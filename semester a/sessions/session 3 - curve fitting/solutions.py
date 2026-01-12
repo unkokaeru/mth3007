@@ -5,7 +5,7 @@ This module provides solutions to the Session 3 exercises covering:
 - Multiple linear regression
 - Gaussian elimination for solving systems
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np
@@ -390,8 +390,8 @@ def main() -> None:
     print("Given data:")
     print("  x₁ | x₂ | y")
     print("  ---|----|-")
-    for i in range(len(y_data)):
-        print(f"  {x1_data[i]:.1f} | {x2_data[i]:.1f} | {y_data[i]:.0f}")
+    for data_index in range(len(y_data)):
+        print(f"  {x1_data[data_index]:.1f} | {x2_data[data_index]:.1f} | {y_data[data_index]:.0f}")
     
     print(f"\nFitted parameters:")
     print(f"  a₀ = {parameters[0]:.4f}")

@@ -5,7 +5,7 @@ This module provides solutions to the Session 5 exercises covering:
 - Lagrange interpolation
 - Bilinear interpolation
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np
@@ -87,8 +87,8 @@ def newton_interpolation(
     # Use Horner's method for efficiency
     result = difference_table[0, num_points - 1]
     
-    for i in range(num_points - 2, -1, -1):
-        result = result * (x_evaluate - x_values[i]) + difference_table[0, i]
+    for point_index in range(num_points - 2, -1, -1):
+        result = result * (x_evaluate - x_values[point_index]) + difference_table[0, point_index]
     
     return result
 
@@ -123,9 +123,9 @@ def lagrange_basis(
     num_points = len(x_values)
     result = np.ones_like(x_evaluate, dtype=float)
     
-    for j in range(num_points):
-        if j != basis_index:
-            result *= (x_evaluate - x_values[j]) / (x_values[basis_index] - x_values[j])
+    for point_index in range(num_points):
+        if point_index != basis_index:
+            result *= (x_evaluate - x_values[point_index]) / (x_values[basis_index] - x_values[point_index])
     
     return result
 
@@ -160,8 +160,8 @@ def lagrange_interpolation(
     num_points = len(x_values)
     result = np.zeros_like(x_evaluate, dtype=float)
     
-    for k in range(num_points):
-        result += y_values[k] * lagrange_basis(x_values, k, x_evaluate)
+    for point_index in range(num_points):
+        result += y_values[point_index] * lagrange_basis(x_values, point_index, x_evaluate)
     
     return result
 
@@ -350,9 +350,9 @@ def plot_polynomial_interpolation(results: dict) -> None:
     axes[0].grid(True, alpha=0.3)
     
     # Plot 2: Lagrange basis polynomials
-    for k in range(len(x_values)):
-        basis_k = lagrange_basis(x_values, k, x_smooth)
-        axes[1].plot(x_smooth, basis_k, linewidth=2, label=f'L{k}(x)')
+    for basis_index in range(len(x_values)):
+        basis_values = lagrange_basis(x_values, basis_index, x_smooth)
+        axes[1].plot(x_smooth, basis_values, linewidth=2, label=f'L{basis_index}(x)')
     
     axes[1].axhline(y=0, color='black', linestyle='-', linewidth=0.5)
     axes[1].axhline(y=1, color='black', linestyle='--', linewidth=0.5)
@@ -443,15 +443,15 @@ def display_divided_differences_table(
     print("-" * 60)
     
     header = "  x   |   f[xᵢ]"
-    for k in range(1, num_points):
-        header += f"  |  f[x₀...x{k}]"
+    for col_index in range(1, num_points):
+        header += f"  |  f[x₀...x{col_index}]"
     print(header)
     print("-" * 60)
     
-    for i in range(num_points):
-        row = f" {x_values[i]:.1f}  |  {difference_table[i, 0]:7.3f}"
-        for j in range(1, num_points - i):
-            row += f"  |  {difference_table[i, j]:10.3f}"
+    for row_index in range(num_points):
+        row = f" {x_values[row_index]:.1f}  |  {difference_table[row_index, 0]:7.3f}"
+        for col_index in range(1, num_points - row_index):
+            row += f"  |  {difference_table[row_index, col_index]:10.3f}"
         print(row)
 
 

@@ -5,7 +5,7 @@ This module provides solutions to the Session 4 exercises covering:
 - Confidence intervals for fitted parameters
 - Exponential basis function fitting
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np

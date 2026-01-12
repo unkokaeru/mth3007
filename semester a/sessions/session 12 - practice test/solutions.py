@@ -8,7 +8,7 @@ This module provides solutions to the Practice Test questions covering:
 - ODE solving with finite differences (Q6)
 - Fourier series coefficient calculation (Q7)
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np
@@ -569,9 +569,9 @@ def solve_second_order_ode_general(
     coefficient_matrix = np.zeros((num_interior, num_interior))
     np.fill_diagonal(coefficient_matrix, diagonal_value)
     
-    for i in range(num_interior - 1):
-        coefficient_matrix[i, i + 1] = off_diagonal
-        coefficient_matrix[i + 1, i] = off_diagonal
+    for row_index in range(num_interior - 1):
+        coefficient_matrix[row_index, row_index + 1] = off_diagonal
+        coefficient_matrix[row_index + 1, row_index] = off_diagonal
     
     # Build right-hand side
     right_hand_side = b_source * step_size**2 * np.ones(num_interior)
@@ -609,10 +609,10 @@ def question6_ode_solution() -> dict:
     dict
         Results for different grid sizes and k values.
     """
-    # Parameters
-    q = -3.0
-    k = 0.0
-    b = 6.0
+    # Parameters (from ODE: q*d²H/dg² + k*H = b)
+    q_coefficient = -3.0
+    k_coefficient = 0.0
+    b_source = 6.0
     g_start = 0.0
     g_end = 5.0
     h_left = 5.0
@@ -623,15 +623,15 @@ def question6_ode_solution() -> dict:
     # Solve with different grid sizes
     for num_intervals in [10, 50, 100, 200]:
         results['k_zero'][num_intervals] = solve_second_order_ode_general(
-            q, k, b, g_start, g_end, h_left, h_right, num_intervals
+            q_coefficient, k_coefficient, b_source, g_start, g_end, h_left, h_right, num_intervals
         )
     
     # Also solve with k = 5.538013
-    k_nonzero = 5.538013
+    k_coefficient_nonzero = 5.538013
     results['k_nonzero'] = {}
     for num_intervals in [10, 50, 100, 200]:
         results['k_nonzero'][num_intervals] = solve_second_order_ode_general(
-            q, k_nonzero, b, g_start, g_end, h_left, h_right, num_intervals
+            q_coefficient, k_coefficient_nonzero, b_source, g_start, g_end, h_left, h_right, num_intervals
         )
     
     return results
@@ -736,10 +736,10 @@ def question7_fourier_coefficient() -> dict:
     def target_function(x):
         return 4 * (x - 0.5)**2
     
-    def phi_m(x, m, l):
-        return np.cos(m * np.pi * x / l)
+    def phi_m(x, m, half_period):
+        return np.cos(m * np.pi * x / half_period)
     
-    l = 0.5  # Half-period for [0, 1)
+    half_period = 0.5  # Half-period for [0, 1)
     
     results = {}
     
@@ -751,8 +751,8 @@ def question7_fourier_coefficient() -> dict:
         # a_m = (1/l) * integral of phi_m(x) * f(x) dx
         # For m = 1: phi_1(x) = cos(πx/l) = cos(2πx) since l = 0.5
         
-        integrand = phi_m(x_grid, 1, l) * target_function(x_grid)
-        a1_numerical = (1 / l) * np.sum(integrand) * dx
+        integrand = phi_m(x_grid, 1, half_period) * target_function(x_grid)
+        a1_numerical = (1 / half_period) * np.sum(integrand) * dx
         
         results[num_points] = a1_numerical
     
@@ -764,8 +764,8 @@ def question7_fourier_coefficient() -> dict:
     # Numerical integration with high accuracy
     x_fine = np.linspace(0, 1, 10000, endpoint=False)
     dx_fine = 1 / 10000
-    integrand_fine = phi_m(x_fine, 1, l) * target_function(x_fine)
-    a1_high_accuracy = (1 / l) * np.sum(integrand_fine) * dx_fine
+    integrand_fine = phi_m(x_fine, 1, half_period) * target_function(x_fine)
+    a1_high_accuracy = (1 / half_period) * np.sum(integrand_fine) * dx_fine
     
     results['high_accuracy'] = a1_high_accuracy
     

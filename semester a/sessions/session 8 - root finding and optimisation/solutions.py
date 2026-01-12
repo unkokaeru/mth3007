@@ -5,7 +5,7 @@ This module provides solutions to the Session 8 exercises covering:
 - Secant method for root finding
 - Newton's method for optimisation
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np
@@ -392,9 +392,9 @@ def plot_newton_convergence(results: dict, func: callable, title: str) -> None:
         Plot title.
     """
     history = results['history']
-    iterations = [i for i in range(len(history))]
-    x_values = [h[0] for h in history]
-    function_values = [h[1] for h in history]
+    iterations = [iteration_number for iteration_number in range(len(history))]
+    x_values = [history_entry[0] for history_entry in history]
+    function_values = [history_entry[1] for history_entry in history]
     
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
@@ -408,8 +408,8 @@ def plot_newton_convergence(results: dict, func: callable, title: str) -> None:
     axes[0].grid(True, alpha=0.3)
     
     # Plot 2: |f(x)| convergence (log scale)
-    abs_f = [abs(f) for f in function_values]
-    axes[1].semilogy(iterations, abs_f, 'go-', markersize=8)
+    abs_function_values = [abs(function_value) for function_value in function_values]
+    axes[1].semilogy(iterations, abs_function_values, 'go-', markersize=8)
     axes[1].set_xlabel('Iteration')
     axes[1].set_ylabel('|f(x)|')
     axes[1].set_title(f'{title}: Convergence of |f(x)|')

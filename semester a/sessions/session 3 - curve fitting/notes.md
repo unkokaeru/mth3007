@@ -1,6 +1,6 @@
 # Session 3: Polynomial and Multiple Regression
 
-> **MTH3007 Numerical Methods** · Matt Watkins · <mwatkins@lincoln.ac.uk>
+> Matt Watkins · <mwatkins@lincoln.ac.uk> (edited by William Fayers)
 
 ---
 

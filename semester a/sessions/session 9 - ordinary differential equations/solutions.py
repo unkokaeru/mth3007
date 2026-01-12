@@ -5,7 +5,7 @@ This module provides solutions to the Session 9 exercises covering:
 - Second-order ODEs with boundary conditions
 - QR algorithm for eigenvalues
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np
@@ -126,9 +126,9 @@ def solve_second_order_ode(
     np.fill_diagonal(coefficient_matrix, -2)
     
     # Fill off-diagonals
-    for i in range(num_interior - 1):
-        coefficient_matrix[i, i + 1] = 1
-        coefficient_matrix[i + 1, i] = 1
+    for row_index in range(num_interior - 1):
+        coefficient_matrix[row_index, row_index + 1] = 1
+        coefficient_matrix[row_index + 1, row_index] = 1
     
     # Build right-hand side vector
     right_hand_side = step_size**2 * source_function(x_interior)
@@ -213,9 +213,9 @@ def solve_ode_with_y_term(
     coefficient_matrix = np.zeros((num_interior, num_interior))
     np.fill_diagonal(coefficient_matrix, diagonal_value)
     
-    for i in range(num_interior - 1):
-        coefficient_matrix[i, i + 1] = 1
-        coefficient_matrix[i + 1, i] = 1
+    for row_index in range(num_interior - 1):
+        coefficient_matrix[row_index, row_index + 1] = 1
+        coefficient_matrix[row_index + 1, row_index] = 1
     
     # Build right-hand side
     right_hand_side = step_size**2 * source_function(x_interior)
@@ -527,8 +527,8 @@ def plot_ode_solutions(
     
     # Plot 2: Error convergence
     num_intervals_list = list(results.keys())
-    errors = [results[n]['max_error'] for n in num_intervals_list]
-    step_sizes = [1 / n for n in num_intervals_list]
+    errors = [results[num_intervals]['max_error'] for num_intervals in num_intervals_list]
+    step_sizes = [1 / num_intervals for num_intervals in num_intervals_list]
     
     axes[1].loglog(step_sizes, errors, 'bo-', markersize=10, linewidth=2, label='Max error')
     

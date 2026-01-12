@@ -4,7 +4,7 @@ This module provides solutions to the Session 1 exercises covering:
 - Computing various mathematical sums
 - Linear regression using the least squares method
 
-Author: MTH3007 Numerical Methods
+Author: William Fayers
 """
 
 import numpy as np

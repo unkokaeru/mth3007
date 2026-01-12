@@ -1,6 +1,6 @@
 # Session 4: General Linear Least Squares
 
-> **MTH3007 Numerical Methods** · Matt Watkins · <mwatkins@lincoln.ac.uk>
+> Matt Watkins · <mwatkins@lincoln.ac.uk> (edited by William Fayers)
 
 ---
 
