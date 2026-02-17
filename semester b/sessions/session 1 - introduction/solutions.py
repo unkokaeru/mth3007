@@ -116,7 +116,7 @@ def implicit_euler_method(
             next_value_guess -= correction
             if abs(correction) < tolerance:
                 break
-        
+
         solution_values[step_index + 1] = next_value_guess
 
     return time_values, solution_values
