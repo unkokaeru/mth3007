@@ -304,3 +304,49 @@ def plot_errors(
     output_dir.mkdir(exist_ok=True)
     plt.savefig(output_dir / "error_comparison.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
+
+
+def ralston_method(
+    derivative_function: Callable[[float, float], float],
+    initial_value: float,
+    time_start: float,
+    time_end: float,
+    time_step: float,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve an ODE using the Ralston method (2nd-order Runge-Kutta).
+
+    The Ralston method is given by:
+    first_stage = f(t_n, y_n)
+    second_stage = f(t_n + 2h/3, y_n + 2h/3*first_stage)
+    y_{n+1} = y_n + h*(1/4*first_stage + 3/4*second_stage)
+
+    Args:
+        derivative_function: Function f(t, y) that computes dy/dt.
+        initial_value: Initial condition y(t_0).
+        time_start: Starting time t_0.
+        time_end: Ending time t_max.
+        time_step: Time step size h (Delta t).
+
+    Returns:
+        Tuple of (time_values, solution_values) arrays.
+    """
+    number_of_steps = int((time_end - time_start) / time_step)
+    time_values = np.linspace(time_start, time_end, number_of_steps + 1)
+    solution_values = np.zeros(number_of_steps + 1)
+    solution_values[0] = initial_value
+
+    for step_index in range(number_of_steps):
+        current_time = time_values[step_index]
+        current_value = solution_values[step_index]
+
+        first_stage = derivative_function(current_time, current_value)
+        second_stage = derivative_function(
+            current_time + 2 * time_step / 3,
+            current_value + 2 * time_step / 3 * first_stage,
+        )
+
+        solution_values[step_index + 1] = (
+            current_value + time_step * (first_stage / 4 + 3 * second_stage / 4)
+        )
+
+    return time_values, solution_values
