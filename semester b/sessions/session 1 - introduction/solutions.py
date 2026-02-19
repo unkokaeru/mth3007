@@ -1,9 +1,4 @@
-"""Solutions for Session 1 - Introduction to Numerical Methods for ODEs.
-
-This module contains implementations of explicit and implicit Euler methods
-for solving ordinary differential equations, along with error analysis
-and visualization tools.
-"""
+"""Solutions for Session 1 - Introduction to Numerical Methods for ODEs."""
 
 from collections.abc import Callable
 from pathlib import Path
