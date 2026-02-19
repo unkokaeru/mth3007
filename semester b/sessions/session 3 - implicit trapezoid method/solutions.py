@@ -1,4 +1,4 @@
-"""Solutions for Session 2 - Runge-Kutta Methods."""
+"""Solutions for Session 3 - Runge-Kutta Methods."""
 
 
 def main() -> None:
