@@ -410,3 +410,59 @@ def implicit_trapezoid_method(
         solution_values[step_index + 1] = next_value_guess
 
     return time_values, solution_values
+
+
+def explicit_euler_system(
+    derivative_function: Callable[
+        [float, npt.NDArray[np.float64]], npt.NDArray[np.float64]
+    ],
+    initial_values: npt.NDArray[np.float64],
+    time_start: float,
+    time_end: float,
+    time_step: float,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve a system of ODEs using the explicit Euler method.
+
+    The explicit Euler method for systems uses the vector approximation:
+    y_{n+1} = y_n + h * g(t_n, y_n)
+
+    Args:
+        derivative_function: Function g(t, y) that computes dy/dt as a vector.
+        initial_values: Initial condition vector y(t_0).
+        time_start: Starting time t_0.
+        time_end: Ending time t_max.
+        time_step: Time step size h (Delta t).
+
+    Returns:
+        Tuple of (time_values, solution_values) where solution_values has
+        shape (number_of_steps + 1, number_of_equations).
+    """
+    number_of_steps = int((time_end - time_start) / time_step)
+    time_values = np.linspace(time_start, time_end, number_of_steps + 1)
+    number_of_equations = len(initial_values)
+    solution_values = np.zeros((number_of_steps + 1, number_of_equations))
+    solution_values[0] = initial_values
+
+    for step_index in range(number_of_steps):
+        current_time = time_values[step_index]
+        current_values = solution_values[step_index]
+        derivatives = derivative_function(current_time, current_values)
+        solution_values[step_index + 1] = current_values + time_step * derivatives
+
+    return time_values, solution_values
+
+
+def compute_explicit_euler_stability_bound(stiff_coefficient: float) -> float:
+    """Compute the maximum stable step-size for the explicit Euler method.
+
+    For dy/dt = -a*y + forcing(t), the explicit Euler method is stable
+    when a*Δt <= 2.
+
+    Args:
+        stiff_coefficient: The coefficient a from the -a*y term.
+
+    Returns:
+        Maximum stable step-size Δt_max = 2/a.
+    """
+    return 2.0 / stiff_coefficient
+
