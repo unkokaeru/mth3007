@@ -452,6 +452,63 @@ def explicit_euler_system(
     return time_values, solution_values
 
 
+def rk4_system(
+    derivative_function: Callable[
+        [float, npt.NDArray[np.float64]], npt.NDArray[np.float64]
+    ],
+    initial_values: npt.NDArray[np.float64],
+    time_start: float,
+    time_end: float,
+    time_step: float,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve a system of ODEs using the classical fourth-order Runge-Kutta method.
+
+    The RK4 method for systems uses:
+    k1 = f(t_n, y_n)
+    k2 = f(t_n + h/2, y_n + h/2 * k1)
+    k3 = f(t_n + h/2, y_n + h/2 * k2)
+    k4 = f(t_n + h, y_n + h * k3)
+    y_{n+1} = y_n + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
+
+    Args:
+        derivative_function: Function g(t, y) that computes dy/dt as a vector.
+        initial_values: Initial condition vector y(t_0).
+        time_start: Starting time t_0.
+        time_end: Ending time t_max.
+        time_step: Time step size h (Delta t).
+
+    Returns:
+        Tuple of (time_values, solution_values) where solution_values has
+        shape (number_of_steps + 1, number_of_equations).
+    """
+    number_of_steps = int((time_end - time_start) / time_step)
+    time_values = np.linspace(time_start, time_end, number_of_steps + 1)
+    number_of_equations = len(initial_values)
+    solution_values = np.zeros((number_of_steps + 1, number_of_equations))
+    solution_values[0] = initial_values
+
+    for step_index in range(number_of_steps):
+        current_time = time_values[step_index]
+        current_values = solution_values[step_index]
+
+        k1 = derivative_function(current_time, current_values)
+        k2 = derivative_function(
+            current_time + time_step / 2, current_values + time_step / 2 * k1
+        )
+        k3 = derivative_function(
+            current_time + time_step / 2, current_values + time_step / 2 * k2
+        )
+        k4 = derivative_function(
+            current_time + time_step, current_values + time_step * k3
+        )
+
+        solution_values[step_index + 1] = current_values + (time_step / 6) * (
+            k1 + 2 * k2 + 2 * k3 + k4
+        )
+
+    return time_values, solution_values
+
+
 def compute_explicit_euler_stability_bound(stiff_coefficient: float) -> float:
     """Compute the maximum stable step-size for the explicit Euler method.
 
