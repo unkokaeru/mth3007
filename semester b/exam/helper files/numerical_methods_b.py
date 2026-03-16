@@ -523,3 +523,59 @@ def compute_explicit_euler_stability_bound(stiff_coefficient: float) -> float:
     """
     return 2.0 / stiff_coefficient
 
+
+def explicit_heat_equation_1d(
+    diffusion_coefficient: float,
+    rod_length: float,
+    spatial_step: float,
+    time_step: float,
+    time_end: float,
+    initial_condition: npt.NDArray[np.float64],
+    boundary_left: float,
+    boundary_right: float,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve the 1D heat equation using the explicit finite-difference scheme.
+
+    Uses forward Euler in time and central difference in space:
+    u_j^{n+1} = u_j^n + r * (u_{j-1}^n - 2*u_j^n + u_{j+1}^n)
+    where r = alpha * dt / dx^2.
+
+    Args:
+        diffusion_coefficient: Heat diffusion coefficient alpha (cm^2/s).
+        rod_length: Length of the rod L (cm).
+        spatial_step: Spatial step size Delta x (cm).
+        time_step: Time step size Delta t (s).
+        time_end: Final time to solve until (s).
+        initial_condition: Initial temperature profile u(0, x) at all grid points.
+        boundary_left: Fixed temperature at x=0 for all t.
+        boundary_right: Fixed temperature at x=L for all t.
+
+    Returns:
+        Tuple of (spatial_values, time_values, solution_matrix) where
+        solution_matrix has shape (number_of_time_steps + 1, number_of_spatial_points).
+    """
+    number_of_spatial_points = int(rod_length / spatial_step) + 1
+    number_of_time_steps = int(time_end / time_step)
+    stability_ratio = diffusion_coefficient * time_step / spatial_step**2
+
+    spatial_values = np.linspace(0, rod_length, number_of_spatial_points)
+    time_values = np.linspace(0, time_end, number_of_time_steps + 1)
+
+    solution_matrix = np.zeros((number_of_time_steps + 1, number_of_spatial_points))
+    solution_matrix[0, :] = initial_condition
+
+    for time_index in range(number_of_time_steps):
+        for spatial_index in range(1, number_of_spatial_points - 1):
+            solution_matrix[time_index + 1, spatial_index] = (
+                solution_matrix[time_index, spatial_index]
+                + stability_ratio * (
+                    solution_matrix[time_index, spatial_index - 1]
+                    - 2 * solution_matrix[time_index, spatial_index]
+                    + solution_matrix[time_index, spatial_index + 1]
+                )
+            )
+        solution_matrix[time_index + 1, 0] = boundary_left
+        solution_matrix[time_index + 1, -1] = boundary_right
+
+    return spatial_values, time_values, solution_matrix
+
