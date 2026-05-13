@@ -1,13 +1,10 @@
 """Solutions for Session 3 - Implicit Trapezoid Method."""
 
 from collections.abc import Callable
-from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "exam" / "helper files"))
 
 
 def implicit_trapezoid_method(

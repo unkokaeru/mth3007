@@ -58,29 +58,29 @@ def lorenz_derivatives(
     _time: float,
     state: npt.NDArray[np.float64],
     sigma: float = 10.0,
-    b: float = 2.666667,
-    r: float = 28.0,
+    beta: float = 2.666667,
+    rho: float = 28.0,
 ) -> npt.NDArray[np.float64]:
     """Compute the derivatives for the Lorenz system.
 
     dx/dt = -sigma*x + sigma*y
-    dy/dt = r*x - y - x*z
-    dz/dt = -b*z + x*y
+    dy/dt = rho*x - y - x*z
+    dz/dt = -beta*z + x*y
 
     Args:
         _time: Current time (unused, system is autonomous).
         state: Current state vector [x, y, z].
         sigma: Lorenz parameter sigma.
-        b: Lorenz parameter b.
-        r: Lorenz parameter r.
+        beta: Lorenz parameter beta.
+        rho: Lorenz parameter rho.
 
     Returns:
         Derivative vector [dx/dt, dy/dt, dz/dt].
     """
-    x, y, z = state
-    dxdt = -sigma * x + sigma * y
-    dydt = r * x - y - x * z
-    dzdt = -b * z + x * y
+    state_x, state_y, state_z = state
+    dxdt = -sigma * state_x + sigma * state_y
+    dydt = rho * state_x - state_y - state_x * state_z
+    dzdt = -beta * state_z + state_x * state_y
     return np.array([dxdt, dydt, dzdt])
 
 
@@ -158,15 +158,15 @@ def main() -> None:
 
     # Question 2: Lorenz system
     sigma = 10.0
-    b = 2.666667
-    r = 28.0
+    beta = 2.666667
+    rho = 28.0
     initial_conditions = np.array([5.1, 5.1, 5.1])
     time_step = 0.004
 
     def lorenz(
-        t: float, state: npt.NDArray[np.float64]
+        time: float, state: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.float64]:
-        return lorenz_derivatives(t, state, sigma, b, r)
+        return lorenz_derivatives(time, state, sigma, beta, rho)
 
     time_values, solution_values = explicit_euler_system(
         lorenz, initial_conditions, 0.0, 20.0, time_step

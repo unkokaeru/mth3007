@@ -1,7 +1,13 @@
-"""Library of numerical methods for solving ordinary differential equations.
+"""Library of numerical methods for MTH3007b Numerical Methods (Semester B).
 
-This module contains implementations of explicit and implicit Euler methods,
-error analysis utilities, and visualization tools for ODE solutions.
+Provides implementations of all methods covered in the module:
+- ODE solvers (scalar): explicit Euler, implicit Euler, Ralston, implicit trapezoid
+- ODE solvers (systems): explicit Euler system, RK4 system
+- PDE solvers: explicit heat equation (FTCS), implicit heat equation (BTCS)
+- Elliptic PDE: Liebmann's method (2D Laplace equation)
+- Stochastic: Euler-Maruyama, Ornstein-Uhlenbeck process
+- Probability: Monte Carlo integration
+- Error analysis and visualisation utilities
 """
 
 from collections.abc import Callable
@@ -491,19 +497,19 @@ def rk4_system(
         current_time = time_values[step_index]
         current_values = solution_values[step_index]
 
-        k1 = derivative_function(current_time, current_values)
-        k2 = derivative_function(
-            current_time + time_step / 2, current_values + time_step / 2 * k1
+        stage_1 = derivative_function(current_time, current_values)
+        stage_2 = derivative_function(
+            current_time + time_step / 2, current_values + time_step / 2 * stage_1
         )
-        k3 = derivative_function(
-            current_time + time_step / 2, current_values + time_step / 2 * k2
+        stage_3 = derivative_function(
+            current_time + time_step / 2, current_values + time_step / 2 * stage_2
         )
-        k4 = derivative_function(
-            current_time + time_step, current_values + time_step * k3
+        stage_4 = derivative_function(
+            current_time + time_step, current_values + time_step * stage_3
         )
 
         solution_values[step_index + 1] = current_values + (time_step / 6) * (
-            k1 + 2 * k2 + 2 * k3 + k4
+            stage_1 + 2 * stage_2 + 2 * stage_3 + stage_4
         )
 
     return time_values, solution_values
@@ -579,3 +585,247 @@ def explicit_heat_equation_1d(
 
     return spatial_values, time_values, solution_matrix
 
+
+
+def implicit_heat_equation_1d(
+    diffusion_coefficient: float,
+    rod_length: float,
+    spatial_step: float,
+    time_step: float,
+    time_end: float,
+    initial_condition: npt.NDArray[np.float64],
+    boundary_left: float,
+    boundary_right: float,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve the 1D heat equation using the implicit (BTCS) finite-difference scheme.
+
+    Solves -r*u_{j-1}^{n+1} + (1+2r)*u_j^{n+1} - r*u_{j+1}^{n+1} = u_j^n at each
+    time step, where r = alpha * dt / dx^2. Unconditionally stable.
+
+    Args:
+        diffusion_coefficient: Heat diffusion coefficient alpha (cm^2/s).
+        rod_length: Length of the rod L (cm).
+        spatial_step: Spatial step size Delta x (cm).
+        time_step: Time step size Delta t (s).
+        time_end: Final time to solve until (s).
+        initial_condition: Initial temperature profile u(0, x) at all grid points.
+        boundary_left: Fixed temperature at x=0 for all t (Dirichlet).
+        boundary_right: Fixed temperature at x=L for all t (Dirichlet).
+
+    Returns:
+        Tuple of (spatial_values, time_values, solution_matrix) where
+        solution_matrix has shape (number_of_time_steps + 1, number_of_spatial_points).
+    """
+    number_of_spatial_points = int(rod_length / spatial_step) + 1
+    number_of_time_steps = int(time_end / time_step)
+    diffusion_number = diffusion_coefficient * time_step / spatial_step**2
+
+    spatial_values = np.linspace(0, rod_length, number_of_spatial_points)
+    time_values = np.linspace(0, time_end, number_of_time_steps + 1)
+
+    solution_matrix = np.zeros((number_of_time_steps + 1, number_of_spatial_points))
+    solution_matrix[0, :] = initial_condition
+
+    number_of_interior_nodes = number_of_spatial_points - 2
+    diagonal_value = 1.0 + 2.0 * diffusion_number
+    off_diagonal_value = -diffusion_number
+
+    coefficient_matrix = np.zeros((number_of_interior_nodes, number_of_interior_nodes))
+    for node_index in range(number_of_interior_nodes):
+        coefficient_matrix[node_index, node_index] = diagonal_value
+        if node_index > 0:
+            coefficient_matrix[node_index, node_index - 1] = off_diagonal_value
+        if node_index < number_of_interior_nodes - 1:
+            coefficient_matrix[node_index, node_index + 1] = off_diagonal_value
+
+    for time_index in range(number_of_time_steps):
+        rhs_vector = solution_matrix[time_index, 1:-1].copy()
+        rhs_vector[0] += diffusion_number * boundary_left
+        rhs_vector[-1] += diffusion_number * boundary_right
+
+        interior_solution = np.linalg.solve(coefficient_matrix, rhs_vector)
+
+        solution_matrix[time_index + 1, 1:-1] = interior_solution
+        solution_matrix[time_index + 1, 0] = boundary_left
+        solution_matrix[time_index + 1, -1] = boundary_right
+
+    return spatial_values, time_values, solution_matrix
+
+
+def liebmann_method(
+    plate_width: float,
+    plate_height: float,
+    spatial_step: float,
+    boundary_top: float,
+    boundary_bottom: float,
+    boundary_left: float,
+    boundary_right: float,
+    tolerance: float = 1e-6,
+    max_iterations: int = 10000,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve the 2D Laplace equation using Liebmann's method (Gauss-Seidel iteration).
+
+    Iterates: u_{i,j} = (u_{i-1,j} + u_{i+1,j} + u_{i,j-1} + u_{i,j+1}) / 4
+    until max nodal change < tolerance.
+
+    Args:
+        plate_width: Width of the plate in x-direction.
+        plate_height: Height of the plate in y-direction.
+        spatial_step: Grid spacing Delta x = Delta y.
+        boundary_top: Temperature along the top edge.
+        boundary_bottom: Temperature along the bottom edge.
+        boundary_left: Temperature along the left edge.
+        boundary_right: Temperature along the right edge.
+        tolerance: Convergence criterion: max nodal change < tolerance.
+        max_iterations: Maximum number of Gauss-Seidel iterations.
+
+    Returns:
+        Tuple of (x_values, y_values, temperature_grid) where temperature_grid
+        has shape (number_of_y_nodes, number_of_x_nodes).
+    """
+    number_of_x_nodes = int(plate_width / spatial_step) + 1
+    number_of_y_nodes = int(plate_height / spatial_step) + 1
+
+    x_values = np.linspace(0, plate_width, number_of_x_nodes)
+    y_values = np.linspace(0, plate_height, number_of_y_nodes)
+
+    temperature_grid = np.zeros((number_of_y_nodes, number_of_x_nodes))
+    temperature_grid[-1, :] = boundary_top
+    temperature_grid[0, :] = boundary_bottom
+    temperature_grid[:, 0] = boundary_left
+    temperature_grid[:, -1] = boundary_right
+
+    for _ in range(max_iterations):
+        max_change = 0.0
+        for row_index in range(1, number_of_y_nodes - 1):
+            for col_index in range(1, number_of_x_nodes - 1):
+                old_value = temperature_grid[row_index, col_index]
+                new_value = (
+                    temperature_grid[row_index - 1, col_index]
+                    + temperature_grid[row_index + 1, col_index]
+                    + temperature_grid[row_index, col_index - 1]
+                    + temperature_grid[row_index, col_index + 1]
+                ) / 4.0
+                temperature_grid[row_index, col_index] = new_value
+                max_change = max(max_change, abs(new_value - old_value))
+        if max_change < tolerance:
+            break
+
+    return x_values, y_values, temperature_grid
+
+
+def monte_carlo_integrate(
+    integrand: Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]],
+    lower_bound: float,
+    upper_bound: float,
+    number_of_samples: int,
+    random_seed: int | None = None,
+) -> float:
+    """Estimate a definite integral using Monte Carlo sampling.
+
+    Estimator: (b - a) * mean(f(x_i)), x_i ~ Uniform[a, b].
+
+    Args:
+        integrand: Function f(x) to integrate.
+        lower_bound: Lower limit a.
+        upper_bound: Upper limit b.
+        number_of_samples: Number of random sample points N.
+        random_seed: Optional seed for reproducibility.
+
+    Returns:
+        Monte Carlo estimate of the integral.
+    """
+    rng = np.random.default_rng(random_seed)
+    sample_points = rng.uniform(lower_bound, upper_bound, number_of_samples)
+    return float((upper_bound - lower_bound) * np.mean(integrand(sample_points)))
+
+
+def euler_maruyama(
+    drift_coefficient: float,
+    diffusion_coefficient: float,
+    initial_value: float,
+    time_start: float,
+    time_end: float,
+    time_step: float,
+    random_seed: int | None = None,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve a linear SDE dX = -drift_coefficient * X dt + diffusion_coefficient * dW.
+
+    Uses the Euler-Maruyama scheme:
+    X_{n+1} = X_n - drift_coefficient * X_n * dt + diffusion_coefficient * sqrt(dt) * Z_n
+
+    Args:
+        drift_coefficient: Mean-reversion rate.
+        diffusion_coefficient: Noise amplitude sigma.
+        initial_value: Initial condition X(t_0).
+        time_start: Starting time t_0.
+        time_end: Ending time t_max.
+        time_step: Time step size Delta t.
+        random_seed: Optional seed for reproducibility.
+
+    Returns:
+        Tuple of (time_values, path_values) arrays.
+    """
+    rng = np.random.default_rng(random_seed)
+    number_of_steps = int((time_end - time_start) / time_step)
+    time_values = np.linspace(time_start, time_end, number_of_steps + 1)
+    path_values = np.zeros(number_of_steps + 1)
+    path_values[0] = initial_value
+
+    noise_increments = rng.standard_normal(number_of_steps) * np.sqrt(time_step)
+
+    for step_index in range(number_of_steps):
+        current_value = path_values[step_index]
+        path_values[step_index + 1] = (
+            current_value
+            - drift_coefficient * current_value * time_step
+            + diffusion_coefficient * noise_increments[step_index]
+        )
+
+    return time_values, path_values
+
+
+def ornstein_uhlenbeck_process(
+    mean_reversion_rate: float,
+    long_run_mean: float,
+    diffusion_coefficient: float,
+    initial_value: float,
+    time_start: float,
+    time_end: float,
+    time_step: float,
+    random_seed: int | None = None,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Simulate an Ornstein-Uhlenbeck process using Euler-Maruyama.
+
+    Solves: dX = mean_reversion_rate * (long_run_mean - X) dt + diffusion_coefficient * dW
+
+    Args:
+        mean_reversion_rate: Rate of reversion towards the long-run mean (kappa).
+        long_run_mean: Long-run mean value (mu).
+        diffusion_coefficient: Noise amplitude (sigma).
+        initial_value: Initial condition X(t_0).
+        time_start: Starting time t_0.
+        time_end: Ending time t_max.
+        time_step: Time step size Delta t.
+        random_seed: Optional seed for reproducibility.
+
+    Returns:
+        Tuple of (time_values, path_values) arrays.
+    """
+    rng = np.random.default_rng(random_seed)
+    number_of_steps = int((time_end - time_start) / time_step)
+    time_values = np.linspace(time_start, time_end, number_of_steps + 1)
+    path_values = np.zeros(number_of_steps + 1)
+    path_values[0] = initial_value
+
+    noise_increments = rng.standard_normal(number_of_steps) * np.sqrt(time_step)
+
+    for step_index in range(number_of_steps):
+        current_value = path_values[step_index]
+        path_values[step_index + 1] = (
+            current_value
+            + mean_reversion_rate * (long_run_mean - current_value) * time_step
+            + diffusion_coefficient * noise_increments[step_index]
+        )
+
+    return time_values, path_values

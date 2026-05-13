@@ -97,19 +97,19 @@ def rk4_system(
         current_time = time_values[step_index]
         current_values = solution_values[step_index]
 
-        k1 = derivative_function(current_time, current_values)
-        k2 = derivative_function(
-            current_time + time_step / 2, current_values + time_step / 2 * k1
+        stage_1 = derivative_function(current_time, current_values)
+        stage_2 = derivative_function(
+            current_time + time_step / 2, current_values + time_step / 2 * stage_1
         )
-        k3 = derivative_function(
-            current_time + time_step / 2, current_values + time_step / 2 * k2
+        stage_3 = derivative_function(
+            current_time + time_step / 2, current_values + time_step / 2 * stage_2
         )
-        k4 = derivative_function(
-            current_time + time_step, current_values + time_step * k3
+        stage_4 = derivative_function(
+            current_time + time_step, current_values + time_step * stage_3
         )
 
         solution_values[step_index + 1] = current_values + (time_step / 6) * (
-            k1 + 2 * k2 + 2 * k3 + k4
+            stage_1 + 2 * stage_2 + 2 * stage_3 + stage_4
         )
 
     return time_values, solution_values
@@ -121,12 +121,12 @@ def system_derivatives(
 ) -> npt.NDArray[np.float64]:
     """Compute derivatives for the system form of y'' + 6y = 0.
 
-    With y1 = y and y2 = y', the system is:
-        dy1/dt = y2
-        dy2/dt = -6 * y1
+    With position = y and velocity = y', the system is:
+        d(position)/dt = velocity
+        d(velocity)/dt = -6 * position
     """
-    y1, y2 = state
-    return np.array([y2, -6.0 * y1])
+    position, velocity = state
+    return np.array([velocity, -6.0 * position])
 
 
 def exact_solution(time_values: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
