@@ -34,9 +34,11 @@ def implicit_heat_equation_1d(
     -r*u_{j-1}^{n+1} + (1+2r)*u_j^{n+1} - r*u_{j+1}^{n+1} = u_j^n
     where r = alpha * dt / dx^2.
 
-    The tridiagonal system is assembled as a full matrix and solved with
-    numpy.linalg.solve. For large grids the Thomas algorithm would be used
-    instead, but it is not required at this level.
+    The tridiagonal system is assembled as a full matrix, inverted with
+    numpy.linalg.inv, and applied via matrix multiplication (numpy.matmul),
+    matching the library approach shown in the lecture notes (section 42.5).
+    For large grids the Thomas algorithm (O(n)) would be more efficient, but
+    the lecture notes explicitly state it is not required.
 
     Args:
         diffusion_coefficient: Heat diffusion coefficient alpha (cm^2/s).
@@ -86,7 +88,8 @@ def implicit_heat_equation_1d(
         rhs_vector[-1] += diffusion_number * boundary_right
 
         # Solve the tridiagonal system
-        interior_solution = np.linalg.solve(coefficient_matrix, rhs_vector)
+        inverse_matrix = np.linalg.inv(coefficient_matrix)
+        interior_solution = np.matmul(inverse_matrix, rhs_vector)
 
         solution_matrix[time_index + 1, 1:-1] = interior_solution
         solution_matrix[time_index + 1, 0] = boundary_left

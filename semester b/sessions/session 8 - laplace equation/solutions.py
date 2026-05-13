@@ -25,17 +25,20 @@ def liebmann_method(
     boundary_bottom: float,
     boundary_left: float,
     boundary_right: float,
-    tolerance: float = 1e-6,
+    tolerance: float = 1e-4,
     max_iterations: int = 10000,
 ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
     """Solve the 2D Laplace equation on a rectangular plate using Liebmann's method.
 
-    Liebmann's method (Gauss-Seidel iteration for the Laplacian) updates each
-    interior node in place using the four-point stencil:
-    u_{i,j} = (u_{i-1,j} + u_{i+1,j} + u_{i,j-1} + u_{i,j+1}) / 4
+    Liebmann's method (Gauss-Seidel iteration for the Laplacian) maintains two arrays:
+    the current iterate (temperature_grid) and the updated iterate (updated_grid).
+    Each sweep computes all updated values from the current values, then replaces the
+    current array. This matches the two-array algorithm in the lecture notes (section 46.4).
 
-    Convergence is checked by the maximum change in any node value between
-    successive iterations.
+    The update rule for each interior node is:
+    unew_{i,j} = (u_{i+1,j} + u_{i-1,j} + u_{i,j+1} + u_{i,j-1}) / 4
+
+    Iteration stops when max |unew_{i,j} - u_{i,j}| < tolerance for all interior nodes.
 
     Args:
         plate_width: Width of the plate in x-direction.
@@ -45,8 +48,8 @@ def liebmann_method(
         boundary_bottom: Temperature along the bottom edge (y = 0).
         boundary_left: Temperature along the left edge (x = 0).
         boundary_right: Temperature along the right edge (x = plate_width).
-        tolerance: Convergence criterion: max nodal change < tolerance.
-        max_iterations: Maximum number of Gauss-Seidel iterations.
+        tolerance: Convergence criterion: max nodal change < tolerance (e.g. 1e-4).
+        max_iterations: Maximum number of iterations.
 
     Returns:
         Tuple of (x_values, y_values, temperature_grid) where temperature_grid
@@ -58,36 +61,42 @@ def liebmann_method(
     x_values = np.linspace(0, plate_width, number_of_x_nodes)
     y_values = np.linspace(0, plate_height, number_of_y_nodes)
 
-    # Initialise grid with zeros; set boundary conditions
+    # Step 1-3: Initialise u_xy and set boundary conditions
     temperature_grid = np.zeros((number_of_y_nodes, number_of_x_nodes))
     temperature_grid[-1, :] = boundary_top       # top row (y = plate_height)
     temperature_grid[0, :] = boundary_bottom     # bottom row (y = 0)
     temperature_grid[:, 0] = boundary_left       # left column
     temperature_grid[:, -1] = boundary_right     # right column
 
-    for iteration_index in range(max_iterations):
-        max_change = 0.0
+    for _ in range(max_iterations):
+        # Step 4: Compute unew_xy from u_xy (do NOT use updated values within this sweep)
+        updated_grid = temperature_grid.copy()
 
         for row_index in range(1, number_of_y_nodes - 1):
             for col_index in range(1, number_of_x_nodes - 1):
-                old_value = temperature_grid[row_index, col_index]
-                new_value = (
+                updated_grid[row_index, col_index] = (
                     temperature_grid[row_index - 1, col_index]
                     + temperature_grid[row_index + 1, col_index]
                     + temperature_grid[row_index, col_index - 1]
                     + temperature_grid[row_index, col_index + 1]
                 ) / 4.0
-                temperature_grid[row_index, col_index] = new_value
-                max_change = max(max_change, abs(new_value - old_value))
 
+        # Step 5: Maximum difference between u_xy and unew_xy
+        max_change = 0.0
+        for row_index in range(1, number_of_y_nodes - 1):
+            for col_index in range(1, number_of_x_nodes - 1):
+                change = abs(updated_grid[row_index, col_index] - temperature_grid[row_index, col_index])
+                if change > max_change:
+                    max_change = change
+
+        # Step 6: Replace u_xy with unew_xy
+        temperature_grid = updated_grid
+
+        # Step 7: Check convergence
         if max_change < tolerance:
-            logger.info("Converged after %d iterations.", iteration_index + 1)
             break
-    else:
-        logger.warning("Maximum iterations reached without convergence.")
 
     return x_values, y_values, temperature_grid
-
 
 def plot_temperature_contour(
     x_values: npt.NDArray[np.float64],

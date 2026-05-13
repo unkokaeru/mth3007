@@ -67,7 +67,6 @@ def euler_maruyama(
 
 def ornstein_uhlenbeck_process(
     mean_reversion_rate: float,
-    long_run_mean: float,
     diffusion_coefficient: float,
     initial_value: float,
     time_start: float,
@@ -75,15 +74,20 @@ def ornstein_uhlenbeck_process(
     time_step: float,
     random_seed: int | None = None,
 ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-    """Simulate an Ornstein-Uhlenbeck process using Euler-Maruyama.
+    """Simulate an Ornstein-Uhlenbeck process using the Euler-Maruyama scheme.
 
-    Solves: dX = mean_reversion_rate * (long_run_mean - X) dt + diffusion_coefficient * dW
+    Solves: dV = -mean_reversion_rate * V dt + dW
+
+    The numerical scheme (from lecture section 38.6.1) is:
+    V(t + dt) = (1 - mean_reversion_rate * dt) * V(t) + sqrt(dt) * Z(t)
+
+    where Z(t) ~ N(0, 1) is a standard normal random variable at each step.
+    Note that for mean_reversion_rate = 0 this reduces to the Wiener process.
 
     Args:
-        mean_reversion_rate: Rate of reversion towards the long-run mean (kappa).
-        long_run_mean: Long-run mean value (mu).
-        diffusion_coefficient: Noise amplitude (sigma).
-        initial_value: Initial condition X(t_0).
+        mean_reversion_rate: Rate k controlling reversion towards zero.
+        diffusion_coefficient: Noise amplitude (coefficient of dW).
+        initial_value: Initial condition V(t_0).
         time_start: Starting time t_0.
         time_end: Ending time t_max.
         time_step: Time step size Delta t.
@@ -103,13 +107,11 @@ def ornstein_uhlenbeck_process(
     for step_index in range(number_of_steps):
         current_value = path_values[step_index]
         path_values[step_index + 1] = (
-            current_value
-            + mean_reversion_rate * (long_run_mean - current_value) * time_step
+            (1.0 - mean_reversion_rate * time_step) * current_value
             + diffusion_coefficient * noise_increments[step_index]
         )
 
     return time_values, path_values
-
 
 def simulate_first_passage_time(
     drift_coefficient: float,
@@ -196,7 +198,6 @@ def main() -> None:
     """Entry point for Session 10 solutions."""
     # Q10.1: Simulate Ornstein-Uhlenbeck process
     mean_reversion_rate = 1.0
-    long_run_mean = 0.0
     diffusion_coefficient = 0.5
     initial_value = 2.0
     time_start = 0.0
@@ -207,7 +208,6 @@ def main() -> None:
     for walker_index in range(5):
         time_values, path = ornstein_uhlenbeck_process(
             mean_reversion_rate,
-            long_run_mean,
             diffusion_coefficient,
             initial_value,
             time_start,

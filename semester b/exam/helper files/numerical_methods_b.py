@@ -5,6 +5,7 @@ Provides implementations of all methods covered in the module:
 - ODE solvers (systems): explicit Euler system, RK4 system
 - PDE solvers: explicit heat equation (FTCS), implicit heat equation (BTCS)
 - Elliptic PDE: Liebmann's method (2D Laplace equation)
+- Linear algebra: Gaussian elimination (augmented matrix form)
 - Stochastic: Euler-Maruyama, Ornstein-Uhlenbeck process
 - Probability: Monte Carlo integration
 - Error analysis and visualisation utilities
@@ -587,6 +588,44 @@ def explicit_heat_equation_1d(
 
 
 
+
+def gaussian_elimination(
+    augmented_matrix: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
+    """Solve the matrix equation Ax = b using Gaussian elimination.
+
+    Implements the algorithm from lecture notes section 42.4. The input is
+    an augmented matrix M where the last column contains b and the remaining
+    columns contain A. The matrix is triangularised in-place.
+
+    Args:
+        augmented_matrix: Augmented matrix [A | b] of shape (n, n+1).
+            This array is modified in-place during triangularisation.
+
+    Returns:
+        Solution vector x of length n.
+    """
+    matrix = augmented_matrix.astype(float)
+    number_of_rows = matrix.shape[0]
+    number_of_cols = matrix.shape[1]
+
+    # Triangularisation
+    for pivot_row in range(number_of_rows - 1):
+        for lower_row in range(pivot_row + 1, number_of_rows):
+            elimination_coefficient = matrix[lower_row, pivot_row] / matrix[pivot_row, pivot_row]
+            for col_index in range(pivot_row, number_of_cols):
+                matrix[lower_row, col_index] -= matrix[pivot_row, col_index] * elimination_coefficient
+
+    # Back substitution
+    solution_vector = np.zeros(number_of_rows)
+    for row_index in range(number_of_rows - 1, -1, -1):
+        solution_vector[row_index] = matrix[row_index, number_of_cols - 1]
+        for col_index in range(row_index + 1, number_of_cols - 1):
+            solution_vector[row_index] -= matrix[row_index, col_index] * solution_vector[col_index]
+        solution_vector[row_index] /= matrix[row_index, row_index]
+
+    return solution_vector
+
 def implicit_heat_equation_1d(
     diffusion_coefficient: float,
     rod_length: float,
@@ -643,7 +682,8 @@ def implicit_heat_equation_1d(
         rhs_vector[0] += diffusion_number * boundary_left
         rhs_vector[-1] += diffusion_number * boundary_right
 
-        interior_solution = np.linalg.solve(coefficient_matrix, rhs_vector)
+        inverse_matrix = np.linalg.inv(coefficient_matrix)
+        interior_solution = np.matmul(inverse_matrix, rhs_vector)
 
         solution_matrix[time_index + 1, 1:-1] = interior_solution
         solution_matrix[time_index + 1, 0] = boundary_left
@@ -660,24 +700,31 @@ def liebmann_method(
     boundary_bottom: float,
     boundary_left: float,
     boundary_right: float,
-    tolerance: float = 1e-6,
+    tolerance: float = 1e-4,
     max_iterations: int = 10000,
 ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-    """Solve the 2D Laplace equation using Liebmann's method (Gauss-Seidel iteration).
+    """Solve the 2D Laplace equation on a rectangular plate using Liebmann's method.
 
-    Iterates: u_{i,j} = (u_{i-1,j} + u_{i+1,j} + u_{i,j-1} + u_{i,j+1}) / 4
-    until max nodal change < tolerance.
+    Liebmann's method (Gauss-Seidel iteration for the Laplacian) maintains two arrays:
+    the current iterate (temperature_grid) and the updated iterate (updated_grid).
+    Each sweep computes all updated values from the current values, then replaces the
+    current array. This matches the two-array algorithm in the lecture notes (section 46.4).
+
+    The update rule for each interior node is:
+    unew_{i,j} = (u_{i+1,j} + u_{i-1,j} + u_{i,j+1} + u_{i,j-1}) / 4
+
+    Iteration stops when max |unew_{i,j} - u_{i,j}| < tolerance for all interior nodes.
 
     Args:
         plate_width: Width of the plate in x-direction.
         plate_height: Height of the plate in y-direction.
-        spatial_step: Grid spacing Delta x = Delta y.
-        boundary_top: Temperature along the top edge.
-        boundary_bottom: Temperature along the bottom edge.
-        boundary_left: Temperature along the left edge.
-        boundary_right: Temperature along the right edge.
-        tolerance: Convergence criterion: max nodal change < tolerance.
-        max_iterations: Maximum number of Gauss-Seidel iterations.
+        spatial_step: Grid spacing Delta x = Delta y (must be equal).
+        boundary_top: Temperature along the top edge (y = plate_height).
+        boundary_bottom: Temperature along the bottom edge (y = 0).
+        boundary_left: Temperature along the left edge (x = 0).
+        boundary_right: Temperature along the right edge (x = plate_width).
+        tolerance: Convergence criterion: max nodal change < tolerance (e.g. 1e-4).
+        max_iterations: Maximum number of iterations.
 
     Returns:
         Tuple of (x_values, y_values, temperature_grid) where temperature_grid
@@ -689,30 +736,42 @@ def liebmann_method(
     x_values = np.linspace(0, plate_width, number_of_x_nodes)
     y_values = np.linspace(0, plate_height, number_of_y_nodes)
 
+    # Step 1-3: Initialise u_xy and set boundary conditions
     temperature_grid = np.zeros((number_of_y_nodes, number_of_x_nodes))
-    temperature_grid[-1, :] = boundary_top
-    temperature_grid[0, :] = boundary_bottom
-    temperature_grid[:, 0] = boundary_left
-    temperature_grid[:, -1] = boundary_right
+    temperature_grid[-1, :] = boundary_top       # top row (y = plate_height)
+    temperature_grid[0, :] = boundary_bottom     # bottom row (y = 0)
+    temperature_grid[:, 0] = boundary_left       # left column
+    temperature_grid[:, -1] = boundary_right     # right column
 
     for _ in range(max_iterations):
-        max_change = 0.0
+        # Step 4: Compute unew_xy from u_xy (do NOT use updated values within this sweep)
+        updated_grid = temperature_grid.copy()
+
         for row_index in range(1, number_of_y_nodes - 1):
             for col_index in range(1, number_of_x_nodes - 1):
-                old_value = temperature_grid[row_index, col_index]
-                new_value = (
+                updated_grid[row_index, col_index] = (
                     temperature_grid[row_index - 1, col_index]
                     + temperature_grid[row_index + 1, col_index]
                     + temperature_grid[row_index, col_index - 1]
                     + temperature_grid[row_index, col_index + 1]
                 ) / 4.0
-                temperature_grid[row_index, col_index] = new_value
-                max_change = max(max_change, abs(new_value - old_value))
+
+        # Step 5: Maximum difference between u_xy and unew_xy
+        max_change = 0.0
+        for row_index in range(1, number_of_y_nodes - 1):
+            for col_index in range(1, number_of_x_nodes - 1):
+                change = abs(updated_grid[row_index, col_index] - temperature_grid[row_index, col_index])
+                if change > max_change:
+                    max_change = change
+
+        # Step 6: Replace u_xy with unew_xy
+        temperature_grid = updated_grid
+
+        # Step 7: Check convergence
         if max_change < tolerance:
             break
 
     return x_values, y_values, temperature_grid
-
 
 def monte_carlo_integrate(
     integrand: Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]],
@@ -787,7 +846,6 @@ def euler_maruyama(
 
 def ornstein_uhlenbeck_process(
     mean_reversion_rate: float,
-    long_run_mean: float,
     diffusion_coefficient: float,
     initial_value: float,
     time_start: float,
@@ -795,15 +853,17 @@ def ornstein_uhlenbeck_process(
     time_step: float,
     random_seed: int | None = None,
 ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
-    """Simulate an Ornstein-Uhlenbeck process using Euler-Maruyama.
+    """Simulate an Ornstein-Uhlenbeck process using the Euler-Maruyama scheme.
 
-    Solves: dX = mean_reversion_rate * (long_run_mean - X) dt + diffusion_coefficient * dW
+    Solves: dV = -mean_reversion_rate * V dt + dW
+
+    Numerical scheme (lecture section 38.6.1):
+    V(t + dt) = (1 - mean_reversion_rate * dt) * V(t) + sqrt(dt) * Z(t)
 
     Args:
-        mean_reversion_rate: Rate of reversion towards the long-run mean (kappa).
-        long_run_mean: Long-run mean value (mu).
-        diffusion_coefficient: Noise amplitude (sigma).
-        initial_value: Initial condition X(t_0).
+        mean_reversion_rate: Rate k controlling reversion towards zero.
+        diffusion_coefficient: Noise amplitude (coefficient of dW).
+        initial_value: Initial condition V(t_0).
         time_start: Starting time t_0.
         time_end: Ending time t_max.
         time_step: Time step size Delta t.
@@ -823,9 +883,9 @@ def ornstein_uhlenbeck_process(
     for step_index in range(number_of_steps):
         current_value = path_values[step_index]
         path_values[step_index + 1] = (
-            current_value
-            + mean_reversion_rate * (long_run_mean - current_value) * time_step
+            (1.0 - mean_reversion_rate * time_step) * current_value
             + diffusion_coefficient * noise_increments[step_index]
         )
 
     return time_values, path_values
+

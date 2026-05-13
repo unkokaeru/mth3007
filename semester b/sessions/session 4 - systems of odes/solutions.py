@@ -1,5 +1,12 @@
-"""Solutions for Session 4 - Systems of ODEs."""
+"""Solutions for Session 4 - Systems of ODEs.
 
+Covers:
+  - Explicit Euler method for systems of ODEs
+  - Predator-prey (Lotka-Volterra) equations
+  - Stability of explicit Euler for stiff ODEs
+"""
+
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -9,6 +16,9 @@ import numpy as np
 import numpy.typing as npt
 
 matplotlib.use("Agg")
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 FIGURES_DIR = SCRIPT_DIR / "figures"
@@ -54,129 +64,167 @@ def explicit_euler_system(
     return time_values, solution_values
 
 
-def lorenz_derivatives(
+def lotka_volterra_derivatives(
     _time: float,
     state: npt.NDArray[np.float64],
-    sigma: float = 10.0,
-    beta: float = 2.666667,
-    rho: float = 28.0,
+    prey_growth_rate: float,
+    predation_rate: float,
+    predator_death_rate: float,
+    predator_growth_rate: float,
 ) -> npt.NDArray[np.float64]:
-    """Compute the derivatives for the Lorenz system.
+    """Compute derivatives for the Lotka-Volterra predator-prey equations.
 
-    dx/dt = -sigma*x + sigma*y
-    dy/dt = rho*x - y - x*z
-    dz/dt = -beta*z + x*y
+    dx/dt =  prey_growth_rate * x - predation_rate * x * y
+    dy/dt = -predator_death_rate * y + predator_growth_rate * x * y
+
+    where x is the prey population and y is the predator population.
 
     Args:
-        _time: Current time (unused, system is autonomous).
-        state: Current state vector [x, y, z].
-        sigma: Lorenz parameter sigma.
-        beta: Lorenz parameter beta.
-        rho: Lorenz parameter rho.
+        _time: Current time (unused; system is autonomous).
+        state: Current state vector [prey_count, predator_count].
+        prey_growth_rate: Rate a at which prey grow.
+        predation_rate: Rate b at which predators consume prey.
+        predator_death_rate: Rate c at which predators die.
+        predator_growth_rate: Rate d at which predators grow from consuming prey.
 
     Returns:
-        Derivative vector [dx/dt, dy/dt, dz/dt].
+        Derivative vector [dx/dt, dy/dt].
     """
-    state_x, state_y, state_z = state
-    dxdt = -sigma * state_x + sigma * state_y
-    dydt = rho * state_x - state_y - state_x * state_z
-    dzdt = -beta * state_z + state_x * state_y
-    return np.array([dxdt, dydt, dzdt])
+    prey_count, predator_count = state
+    dprey = prey_growth_rate * prey_count - predation_rate * prey_count * predator_count
+    dpredator = (
+        -predator_death_rate * predator_count
+        + predator_growth_rate * prey_count * predator_count
+    )
+    return np.array([dprey, dpredator])
 
 
-def plot_lorenz_x_vs_t(
+def plot_phase_portrait(
+    solution_values: npt.NDArray[np.float64],
+    initial_prey: float,
+    initial_predator: float,
+    time_step: float,
+) -> None:
+    """Plot the predator-prey phase portrait (prey vs predator).
+
+    Args:
+        solution_values: Solution array with shape (n, 2) for [prey, predator].
+        initial_prey: Initial prey population.
+        initial_predator: Initial predator population.
+        time_step: Integration time step used.
+    """
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
+    figure, axes = plt.subplots(figsize=(8, 6))
+    axes.plot(
+        solution_values[:, 0],
+        solution_values[:, 1],
+        "b-",
+        linewidth=0.8,
+        label="Orbit",
+    )
+    axes.plot(initial_prey, initial_predator, ".r", markersize=8, label="Start")
+    axes.plot(
+        solution_values[-1, 0],
+        solution_values[-1, 1],
+        "xr",
+        markersize=8,
+        label="End",
+    )
+    axes.set_xlabel("Prey population x")
+    axes.set_ylabel("Predator population y")
+    axes.set_title(f"Predator-Prey Phase Portrait (Explicit Euler, Δt = {time_step})")
+    axes.legend()
+    axes.grid(True, alpha=0.3)
+
+    figure.savefig(FIGURES_DIR / "predator_prey_phase.png", dpi=300, bbox_inches="tight")
+    plt.close(figure)
+    logger.info("Saved figures/predator_prey_phase.png")
+
+
+def plot_populations_vs_time(
     time_values: npt.NDArray[np.float64],
     solution_values: npt.NDArray[np.float64],
     time_step: float,
 ) -> None:
-    """Plot x(t) for the Lorenz system.
+    """Plot prey and predator populations as functions of time.
 
     Args:
         time_values: Array of time values.
-        solution_values: Solution array with shape (n, 3) for [x, y, z].
+        solution_values: Solution array with shape (n, 2) for [prey, predator].
         time_step: Integration time step used.
     """
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(time_values, solution_values[:, 0], "b-", linewidth=0.5)
-    ax.set_xlabel("Time t")
-    ax.set_ylabel("x(t)")
-    ax.set_title(f"Lorenz System: x vs t (Explicit Euler, Δt = {time_step})")
-    ax.grid(True, alpha=0.3)
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    plt.tight_layout()
-    FIGURES_DIR.mkdir(exist_ok=True)
-    plt.savefig(FIGURES_DIR / "lorenz_x_vs_t.png", dpi=300, bbox_inches="tight")
-    plt.close(fig)
+    figure, axes = plt.subplots(figsize=(10, 5))
+    axes.plot(time_values, solution_values[:, 0], "b-", linewidth=1.2, label="Prey x(t)")
+    axes.plot(time_values, solution_values[:, 1], "r--", linewidth=1.2, label="Predator y(t)")
+    axes.set_xlabel("Time t")
+    axes.set_ylabel("Population")
+    axes.set_title(f"Predator-Prey Populations vs Time (Explicit Euler, Δt = {time_step})")
+    axes.legend()
+    axes.grid(True, alpha=0.3)
 
-
-def plot_lorenz_x_vs_y(
-    solution_values: npt.NDArray[np.float64],
-    time_step: float,
-) -> None:
-    """Plot x vs y phase portrait for the Lorenz system.
-
-    Args:
-        solution_values: Solution array with shape (n, 3) for [x, y, z].
-        time_step: Integration time step used.
-    """
-    fig, ax = plt.subplots(figsize=(10, 8))
-    ax.plot(
-        solution_values[:, 0], solution_values[:, 1], "b-", linewidth=0.3, alpha=0.7
-    )
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title(f"Lorenz System: x vs y (Explicit Euler, Δt = {time_step})")
-    ax.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    FIGURES_DIR.mkdir(exist_ok=True)
-    plt.savefig(FIGURES_DIR / "lorenz_x_vs_y.png", dpi=300, bbox_inches="tight")
-    plt.close(fig)
+    figure.savefig(FIGURES_DIR / "predator_prey_time.png", dpi=300, bbox_inches="tight")
+    plt.close(figure)
+    logger.info("Saved figures/predator_prey_time.png")
 
 
 def compute_explicit_euler_stability_bound(stiff_coefficient: float) -> float:
     """Compute the maximum stable step-size for the explicit Euler method.
 
-    For dy/dt = -a*y + forcing(t), the explicit Euler method is stable
-    when a*Δt <= 2.
+    For dy/dt = -a*y, the explicit Euler method is stable when a*Delta_t <= 2.
 
     Args:
         stiff_coefficient: The coefficient a from the -a*y term.
 
     Returns:
-        Maximum stable step-size Δt_max = 2/a.
+        Maximum stable step-size Delta_t_max = 2/a.
     """
     return 2.0 / stiff_coefficient
 
 
 def main() -> None:
     """Entry point for Session 4 solutions."""
-    # Question 1: Stability bound for explicit Euler
-    stiff_coefficient = 200000.0
-    max_step_size = compute_explicit_euler_stability_bound(stiff_coefficient)
-    print(f"Q1: Δt_max = 2/a = 2/{stiff_coefficient:.0f} = {max_step_size:.5f}")
+    # --- Exercise 4.4: Predator-prey (Lotka-Volterra) ---
+    # Parameters from lecture section 23.3
+    prey_growth_rate = 1.2
+    predation_rate = 0.6
+    predator_death_rate = 0.8
+    predator_growth_rate = 0.3
 
-    # Question 2: Lorenz system
-    sigma = 10.0
-    beta = 2.666667
-    rho = 28.0
-    initial_conditions = np.array([5.1, 5.1, 5.1])
-    time_step = 0.004
+    initial_prey = 2.0
+    initial_predator = 1.0
+    initial_values = np.array([initial_prey, initial_predator])
+    time_step = 0.01
+    time_end = 30.0
 
-    def lorenz(
+    def predator_prey(
         time: float, state: npt.NDArray[np.float64]
     ) -> npt.NDArray[np.float64]:
-        return lorenz_derivatives(time, state, sigma, beta, rho)
+        return lotka_volterra_derivatives(
+            time,
+            state,
+            prey_growth_rate,
+            predation_rate,
+            predator_death_rate,
+            predator_growth_rate,
+        )
 
     time_values, solution_values = explicit_euler_system(
-        lorenz, initial_conditions, 0.0, 20.0, time_step
+        predator_prey, initial_values, 0.0, time_end, time_step
     )
 
-    print(f"Q2: y(20) = {solution_values[-1, 1]:.7g}")
+    print(f"Predator-prey: final prey={solution_values[-1, 0]:.4f}, predator={solution_values[-1, 1]:.4f}")
 
-    plot_lorenz_x_vs_t(time_values, solution_values, time_step)
-    plot_lorenz_x_vs_y(solution_values, time_step)
-    print("    Plots saved to figures/")
+    plot_phase_portrait(solution_values, initial_prey, initial_predator, time_step)
+    plot_populations_vs_time(time_values, solution_values, time_step)
+
+    # --- Exercise 4.5: Stability of explicit Euler ---
+    # For dy/dt = -a*y, explicit Euler is stable when a*dt <= 2 (i.e., dt <= 2/a)
+    stiff_coefficient = 200000.0
+    max_step_size = compute_explicit_euler_stability_bound(stiff_coefficient)
+    print(f"\nStability: Delta_t_max = 2/a = 2/{stiff_coefficient:.0f} = {max_step_size:.5f}")
 
 
 if __name__ == "__main__":
