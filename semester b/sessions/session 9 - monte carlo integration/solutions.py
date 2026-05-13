@@ -24,96 +24,40 @@ def monte_carlo_integrate(
     upper_bound: float,
     number_of_samples: int,
     random_seed: int | None = None,
-) -> float:
+) -> tuple[float, float]:
     """Estimate a definite integral using Monte Carlo sampling.
 
-    The estimator is:
-    integral ~ (b - a) * mean(f(x_i))
+    The estimator is (lecture section 32.3):
+        F_N = (b - a) * mean(f(x_i))
     where x_i are uniformly sampled from [a, b].
+
+    The one-standard-deviation error estimate is (lecture section 32.4):
+        sigma_F = (b - a) * sqrt((mean(f^2) - mean(f)^2) / N)
 
     Args:
         integrand: Function f(x) to integrate.
         lower_bound: Lower limit of integration a.
         upper_bound: Upper limit of integration b.
-        number_of_samples: Number of random sample points.
+        number_of_samples: Number of random sample points N.
         random_seed: Optional seed for reproducibility.
 
     Returns:
-        Monte Carlo estimate of the integral.
+        Tuple of (estimate, one_sigma_error) for the integral.
     """
     rng = np.random.default_rng(random_seed)
+    interval_length = upper_bound - lower_bound
     sample_points = rng.uniform(lower_bound, upper_bound, number_of_samples)
     function_values = integrand(sample_points)
-    return float((upper_bound - lower_bound) * np.mean(function_values))
 
+    mean_f = float(np.mean(function_values))
+    mean_f_squared = float(np.mean(function_values**2))
 
-def convergence_study(
-    integrand: Callable[[npt.NDArray[np.float64]], npt.NDArray[np.float64]],
-    lower_bound: float,
-    upper_bound: float,
-    exact_value: float,
-    sample_counts: list[int],
-    number_of_repeats: int = 20,
-    random_seed: int | None = 42,
-) -> tuple[list[int], list[float]]:
-    """Study how Monte Carlo error decreases as number of samples increases.
+    estimate = interval_length * mean_f
+    one_sigma_error = interval_length * np.sqrt(
+        (mean_f_squared - mean_f**2) / number_of_samples
+    )
 
-    Runs multiple independent estimates for each sample count and computes
-    the mean absolute error.
-
-    Args:
-        integrand: Function f(x) to integrate.
-        lower_bound: Lower limit of integration a.
-        upper_bound: Upper limit of integration b.
-        exact_value: Known exact value of the integral (for error computation).
-        sample_counts: List of sample sizes to test.
-        number_of_repeats: Number of independent estimates per sample count.
-        random_seed: Base seed for reproducibility.
-
-    Returns:
-        Tuple of (sample_counts, mean_absolute_errors).
-    """
-    mean_absolute_errors = []
-    rng = np.random.default_rng(random_seed)
-
-    for count in sample_counts:
-        errors = []
-        for _ in range(number_of_repeats):
-            seed = int(rng.integers(0, 10**9))
-            estimate = monte_carlo_integrate(integrand, lower_bound, upper_bound, count, seed)
-            errors.append(abs(estimate - exact_value))
-        mean_absolute_errors.append(float(np.mean(errors)))
-
-    return sample_counts, mean_absolute_errors
-
-
-def plot_convergence(
-    sample_counts: list[int],
-    mean_absolute_errors: list[float],
-) -> None:
-    """Plot Monte Carlo error convergence on a log-log scale.
-
-    Args:
-        sample_counts: List of sample sizes.
-        mean_absolute_errors: Mean absolute error at each sample count.
-    """
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-
-    reference_x = np.array([sample_counts[0], sample_counts[-1]], dtype=float)
-    reference_y = mean_absolute_errors[0] * np.sqrt(reference_x[0] / reference_x)
-
-    figure, axes = plt.subplots(figsize=(8, 6))
-    axes.loglog(sample_counts, mean_absolute_errors, "b-o", linewidth=1.5, label="MC error")
-    axes.loglog(reference_x, reference_y, "k--", linewidth=1.0, label="O(N^{-1/2}) reference")
-    axes.set_xlabel("Number of samples N")
-    axes.set_ylabel("Mean absolute error")
-    axes.set_title("Monte Carlo Integration: Error Convergence")
-    axes.legend()
-    axes.grid(True, alpha=0.3, which="both")
-
-    figure.savefig(FIGURES_DIR / "monte_carlo_convergence.png", dpi=300, bbox_inches="tight")
-    plt.close(figure)
-    logger.info("Saved figures/monte_carlo_convergence.png")
+    return estimate, float(one_sigma_error)
 
 
 def main() -> None:
@@ -125,26 +69,34 @@ def main() -> None:
     lower_bound = 0.0
     upper_bound = np.pi
     exact_value = 2.0
-    number_of_samples = 10000
 
-    estimate = monte_carlo_integrate(
+    print("=" * 70)
+    print("MC integration of sin(x) from 0 to pi  (exact = 2)")
+    print("=" * 70)
+
+    for number_of_samples in [100, 1000, 10000, 100000]:
+        estimate, one_sigma_error = monte_carlo_integrate(
+            integrand_sin, lower_bound, upper_bound, number_of_samples, random_seed=42
+        )
+        absolute_error = abs(estimate - exact_value)
+        print(
+            f"  N = {number_of_samples:7d}:  F_N = {estimate:.6f},"
+            f"  1-sigma = {one_sigma_error:.4e},"
+            f"  |error| = {absolute_error:.4e}"
+        )
+
+    print("=" * 70)
+
+    # Q9.2: Demonstrate 1-sigma bounds — F lies within F_N +/- sigma_F most of the time
+    number_of_samples = 10000
+    estimate, one_sigma_error = monte_carlo_integrate(
         integrand_sin, lower_bound, upper_bound, number_of_samples, random_seed=42
     )
-    print(f"MC estimate of integral of sin(x) from 0 to pi: {estimate:.6f}")
-    print(f"Exact value: {exact_value:.6f}")
-    print(f"Absolute error: {abs(estimate - exact_value):.6e}")
-
-    # Q9.2: Convergence study
-    sample_counts = [10, 100, 1000, 10000, 100000]
-    counts, errors = convergence_study(
-        integrand_sin, lower_bound, upper_bound, exact_value, sample_counts
-    )
-
-    print("\nConvergence study:")
-    for count, error in zip(counts, errors):
-        print(f"  N = {count:7d}:  mean error = {error:.4e}")
-
-    plot_convergence(counts, errors)
+    print(f"\nFor N = {number_of_samples}:")
+    print(f"  Estimate  F_N  = {estimate:.6f}")
+    print(f"  1-sigma error  = {one_sigma_error:.6f}")
+    print(f"  Interval       = [{estimate - one_sigma_error:.6f}, {estimate + one_sigma_error:.6f}]")
+    print(f"  Exact value    = {exact_value:.6f}")
 
 
 if __name__ == "__main__":

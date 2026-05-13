@@ -203,10 +203,14 @@ def monte_carlo_integrate(
     upper_bound: float,
     number_of_samples: int,
     random_seed: int | None = None,
-) -> float:
+) -> tuple[float, float]:
     """Estimate a definite integral using Monte Carlo sampling.
 
-    Estimator: (b - a) * mean(f(x_i)), x_i ~ Uniform[a, b].
+    Estimator (lecture section 32.3):
+        F_N = (b - a) * mean(f(x_i)),  x_i ~ Uniform[a, b]
+
+    One-standard-deviation error estimate (lecture section 32.4):
+        sigma_F = (b - a) * sqrt((mean(f^2) - mean(f)^2) / N)
 
     Args:
         integrand: f(x) to integrate.
@@ -216,11 +220,22 @@ def monte_carlo_integrate(
         random_seed: Optional seed for reproducibility.
 
     Returns:
-        Monte Carlo estimate of the integral.
+        Tuple of (estimate, one_sigma_error) for the integral.
     """
     rng = np.random.default_rng(random_seed)
+    interval_length = upper_bound - lower_bound
     sample_points = rng.uniform(lower_bound, upper_bound, number_of_samples)
-    return float((upper_bound - lower_bound) * np.mean(integrand(sample_points)))
+    function_values = integrand(sample_points)
+
+    mean_f = float(np.mean(function_values))
+    mean_f_squared = float(np.mean(function_values**2))
+
+    estimate = interval_length * mean_f
+    one_sigma_error = interval_length * np.sqrt(
+        (mean_f_squared - mean_f**2) / number_of_samples
+    )
+
+    return estimate, float(one_sigma_error)
 
 
 # ---------------------------------------------------------------------------
@@ -284,8 +299,13 @@ def example_monte_carlo() -> None:
 
     exact_value = 1.0 / 3.0
     for number_of_samples in [100, 1000, 10000]:
-        estimate = monte_carlo_integrate(integrand, 0.0, 1.0, number_of_samples, random_seed=42)
-        print(f"  N={number_of_samples:6d}: estimate={estimate:.6f}, error={abs(estimate - exact_value):.4e}")
+        estimate, one_sigma_error = monte_carlo_integrate(
+            integrand, 0.0, 1.0, number_of_samples, random_seed=42
+        )
+        print(
+            f"  N={number_of_samples:6d}: estimate={estimate:.6f},"
+            f" 1-sigma={one_sigma_error:.4e}, error={abs(estimate - exact_value):.4e}"
+        )
 
 
 def main() -> None:

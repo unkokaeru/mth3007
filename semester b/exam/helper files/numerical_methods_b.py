@@ -1,7 +1,7 @@
 """Library of numerical methods for MTH3007b Numerical Methods (Semester B).
 
 Provides implementations of all methods covered in the module:
-- ODE solvers (scalar): explicit Euler, implicit Euler, Ralston, implicit trapezoid
+- ODE solvers (scalar): explicit Euler, implicit Euler, midpoint, Ralston, implicit trapezoid
 - ODE solvers (systems): explicit Euler system, RK4 system
 - PDE solvers: explicit heat equation (FTCS), implicit heat equation (BTCS)
 - Elliptic PDE: Liebmann's method (2D Laplace equation)
@@ -311,6 +311,45 @@ def plot_errors(
     output_dir.mkdir(exist_ok=True)
     plt.savefig(output_dir / "error_comparison.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
+
+
+def midpoint_method(
+    derivative_function: Callable[[float, float], float],
+    initial_value: float,
+    time_start: float,
+    time_end: float,
+    time_step: float,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """Solve an ODE using the midpoint method (2nd-order Runge-Kutta).
+
+    The midpoint method (lecture section 12.2) is given by:
+    y_{n+1} = y_n + h * g(t_n + h/2, y_n + (h/2)*g(t_n, y_n))
+
+    Args:
+        derivative_function: Function f(t, y) that computes dy/dt.
+        initial_value: Initial condition y(t_0).
+        time_start: Starting time t_0.
+        time_end: Ending time t_max.
+        time_step: Time step size h (Delta t).
+
+    Returns:
+        Tuple of (time_values, solution_values) arrays.
+    """
+    number_of_steps = int((time_end - time_start) / time_step)
+    time_values = np.linspace(time_start, time_end, number_of_steps + 1)
+    solution_values = np.zeros(number_of_steps + 1)
+    solution_values[0] = initial_value
+
+    for step_index in range(number_of_steps):
+        current_time = time_values[step_index]
+        current_value = solution_values[step_index]
+        midpoint_slope = derivative_function(current_time, current_value)
+        solution_values[step_index + 1] = current_value + time_step * derivative_function(
+            current_time + time_step / 2,
+            current_value + (time_step / 2) * midpoint_slope,
+        )
+
+    return time_values, solution_values
 
 
 def ralston_method(
@@ -779,10 +818,14 @@ def monte_carlo_integrate(
     upper_bound: float,
     number_of_samples: int,
     random_seed: int | None = None,
-) -> float:
+) -> tuple[float, float]:
     """Estimate a definite integral using Monte Carlo sampling.
 
-    Estimator: (b - a) * mean(f(x_i)), x_i ~ Uniform[a, b].
+    Estimator (lecture section 32.3):
+        F_N = (b - a) * mean(f(x_i)),  x_i ~ Uniform[a, b]
+
+    One-standard-deviation error estimate (lecture section 32.4):
+        sigma_F = (b - a) * sqrt((mean(f^2) - mean(f)^2) / N)
 
     Args:
         integrand: Function f(x) to integrate.
@@ -792,11 +835,22 @@ def monte_carlo_integrate(
         random_seed: Optional seed for reproducibility.
 
     Returns:
-        Monte Carlo estimate of the integral.
+        Tuple of (estimate, one_sigma_error) for the integral.
     """
     rng = np.random.default_rng(random_seed)
+    interval_length = upper_bound - lower_bound
     sample_points = rng.uniform(lower_bound, upper_bound, number_of_samples)
-    return float((upper_bound - lower_bound) * np.mean(integrand(sample_points)))
+    function_values = integrand(sample_points)
+
+    mean_f = float(np.mean(function_values))
+    mean_f_squared = float(np.mean(function_values**2))
+
+    estimate = interval_length * mean_f
+    one_sigma_error = interval_length * np.sqrt(
+        (mean_f_squared - mean_f**2) / number_of_samples
+    )
+
+    return estimate, float(one_sigma_error)
 
 
 def euler_maruyama(
